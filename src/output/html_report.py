@@ -1,33 +1,83 @@
-"""Single-file HTML report with scorecard, filters, and reframing bridge."""
+"""Single-file HTML report — v2 with sparse-aware design and better visual hierarchy."""
 
 from __future__ import annotations
 
 import html
 import json
+import math
 
 from src.analysis.report import GapReportOutput
 from .theme import CIT_CSS, CIT_JS, SEVERITY_COLORS, QUALITY_PCT, CONFIDENCE_PCT
+
+
+def _ring_svg(pct: int, color: str, label: str) -> str:
+    """SVG ring progress indicator."""
+    r = 15
+    circ = 2 * math.pi * r
+    offset = circ * (1 - pct / 100)
+    return f"""<div class="ring">
+  <svg viewBox="0 0 36 36">
+    <circle class="bg" cx="18" cy="18" r="{r}"/>
+    <circle class="fg" cx="18" cy="18" r="{r}"
+      stroke-dasharray="{circ}" stroke-dashoffset="{offset}"
+      stroke="{color}"/>
+  </svg>
+  <span class="pct">{pct}%</span>
+</div>"""
+
+
+def _severity_color(sev: str) -> str:
+    return SEVERITY_COLORS.get(sev, "#94a3b8")
 
 
 def to_html(report: GapReportOutput, *, title: str | None = None) -> str:
     title = title or f"CIT — {report.company_name}"
     gaps_json = json.dumps(report.gaps)
 
+    is_sparse = report.data_quality == "sparse" or report.confidence == "low"
+    has_gaps = len(report.gaps) > 0
+
     gap_cards = _gap_cards_html(report.gaps)
     radar_bars = _gap_radar(report.gaps)
-    checklist = _checklist_html(report.talking_points)
+    checklist = _checklist_html(report.talking_points, is_sparse=is_sparse)
     warnings = _warnings_html(report)
     scorecard = _scorecard_html(report)
-    flags = "".join(f'<span class="chip warn">{html.escape(f)}</span>' for f in report.edge_flags)
+    sparse_section = _sparse_brief(report) if is_sparse and not has_gaps else ""
+    overview = _report_overview(report)
 
     meta_chips = [
-        f'<span class="chip">quality: {html.escape(report.data_quality)}</span>',
-        f'<span class="chip">synthesis: {html.escape(report.synthesis_mode)}</span>',
+        f'<span class="chip">{html.escape(report.data_quality)} data</span>',
+        f'<span class="chip">{html.escape(report.synthesis_mode)} synthesis</span>',
+        f'<span class="chip {report.confidence}">{html.escape(report.confidence)} confidence</span>',
     ]
     if report.enrichment_applied:
         meta_chips.append('<span class="chip accent">reference enriched</span>')
+    for f in report.edge_flags[:3]:
+        meta_chips.append(f'<span class="chip warn">{html.escape(f)}</span>')
 
-    insight_text = report.interview_insight
+    source_text = (
+        ", ".join(report.data_sources) if report.data_sources else "not captured"
+    )
+    meta_chips.append(f'<span class="chip">sources: {html.escape(source_text)}</span>')
+
+    # Gap section — show radar only if gaps exist
+    gaps_section = (
+        f"""
+    <section id="gaps">
+      <h2>Gap analysis <span class="count">({len(report.gaps)} detected)</span></h2>
+      {radar_bars}
+      <div class="gap-filters">
+        <button class="btn active" data-filter="all" onclick="filterGaps('all')">All</button>
+        <button class="btn" data-filter="high" onclick="filterGaps('high')">High</button>
+        <button class="btn" data-filter="medium" onclick="filterGaps('medium')">Medium</button>
+        <button class="btn" data-filter="low" onclick="filterGaps('low')">Low</button>
+      </div>
+      <div class="gaps-grid">{gap_cards or _no_gaps_content(report)}</div>
+    </section>
+    """
+        if has_gaps
+        else ""
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -36,7 +86,7 @@ def to_html(report: GapReportOutput, *, title: str | None = None) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{html.escape(title)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>{CIT_CSS}</style>
 </head>
 <body data-theme="dark">
@@ -45,7 +95,7 @@ def to_html(report: GapReportOutput, *, title: str | None = None) -> str:
       <div>
         <div class="brand">Company Intelligence Tool</div>
         <h1>{html.escape(report.company_name)}</h1>
-        <p class="sub">Reframing report · {html.escape(report.analyzed_at[:19].replace('T', ' '))} UTC</p>
+        <p class="sub">Reframing report &middot; {html.escape(report.analyzed_at[:19].replace("T", " "))} UTC</p>
       </div>
       <div class="toolbar">
         <button class="btn" onclick="window.print()">Print</button>
@@ -56,133 +106,191 @@ def to_html(report: GapReportOutput, *, title: str | None = None) -> str:
 
     <nav class="nav-pills">
       <a href="#insight">Insight</a>
-      <a href="#layers">Layers</a>
-      <a href="#gaps">Gaps</a>
+      {"<a href='#gaps'>Gaps</a>" if has_gaps else ""}
       <a href="#prep">Prep</a>
     </nav>
 
+    {overview}
     {scorecard}
-
-    <div class="chips" style="margin-bottom:1rem">
-      {''.join(meta_chips)}
-      {flags}
-      <span class="chip">sources: {html.escape(', '.join(report.data_sources) or '—')}</span>
-    </div>
-
+    {sparse_section}
     {warnings}
+
+    <div class="chips">
+      {''.join(meta_chips)}
+    </div>
 
     <div class="insight-box" id="insight">
       <h2>Interview insight</h2>
       <p class="tension">{html.escape(report.key_tension)}</p>
-      <p class="insight-body" id="insight-text">{html.escape(insight_text)}</p>
+      <p class="insight-body" id="insight-text">{html.escape(report.interview_insight)}</p>
     </div>
 
-    <div class="reframe-bridge" id="layers">
+    <div class="reframe-bridge">
       <div class="layer layer1">
-        <h3>Layer 1 — Narrative</h3>
+        <h3><span class="num">1</span> Narrative</h3>
         <p>{html.escape(report.what_company_says)}</p>
       </div>
-      <div class="bridge-arrow" title="Reframing gap">⟷</div>
+      <div class="bridge-arrow" title="Reframing gap">&#10230;</div>
       <div class="layer layer2">
-        <h3>Layer 2 — Data</h3>
+        <h3><span class="num">2</span> Data</h3>
         <p>{html.escape(report.what_data_shows)}</p>
       </div>
     </div>
 
-    <section id="gaps">
-      <h2>Gap analysis <span class="muted" style="font-weight:400">({len(report.gaps)} detected)</span></h2>
-      <div class="radar">{radar_bars}</div>
-      <div class="gap-filters">
-        <button class="btn active" data-filter="all" onclick="filterGaps('all')">All</button>
-        <button class="btn" data-filter="high" onclick="filterGaps('high')">High</button>
-        <button class="btn" data-filter="medium" onclick="filterGaps('medium')">Medium</button>
-        <button class="btn" data-filter="low" onclick="filterGaps('low')">Low</button>
-      </div>
-      <div class="gaps-grid">{gap_cards or '<p class="muted">No structural gaps detected — probe with second-order questions.</p>'}</div>
-    </section>
+    {gaps_section}
 
     <section id="prep">
-      <h2>Interview prep checklist</h2>
+      <h2>Interview prep</h2>
       <ul class="checklist">{checklist}</ul>
     </section>
 
-    <footer>Generated by CIT · confidence {html.escape(report.confidence)} · {html.escape(report.synthesis_mode)} synthesis</footer>
+    <footer>
+      <span>Generated by CIT &middot; {html.escape(report.synthesis_mode)} synthesis</span>
+      <span>{html.escape(report.company_name)} &middot; {html.escape(report.confidence)} confidence</span>
+    </footer>
   </div>
-  <script>const gaps = {gaps_json};{CIT_JS}</script>
+  <script>var gaps = {gaps_json};{CIT_JS}</script>
 </body>
 </html>"""
+
+
+def _report_overview(report: GapReportOutput) -> str:
+    """One-line overview showing the company's situation at a glance."""
+    gap_count = len(report.gaps)
+    high_count = sum(1 for g in report.gaps if g.get("severity") == "high")
+    gap_info = f"{gap_count} gap{'s' if gap_count != 1 else ''} identified"
+    if high_count:
+        gap_info += f" ({high_count} high severity)"
+    elif not gap_count:
+        gap_info = "limited public data — insights are directional"
+
+    return f"""<div class="report-overview">
+  <p>
+    <strong>{html.escape(report.company_name)}</strong> &mdash; {html.escape(report.key_tension[:120])}
+  </p>
+  <div>
+    <span class="quick-stat">{gap_info}</span>
+    <span class="quick-stat">{html.escape(report.data_quality)} data quality</span>
+    <span class="quick-stat">{html.escape(report.confidence)} confidence</span>
+  </div>
+</div>"""
+
+
+def _sparse_brief(report: GapReportOutput) -> str:
+    """Replace empty gap section with actionable intelligence brief."""
+    return f"""<div class="sparse-notice">
+  <h3>Limited public intelligence</h3>
+  <p>Public data on {html.escape(report.company_name)} is sparse. This is normal for private or regional companies. The insight below is directional — designed to help you ask better questions, not to tell you what to think.</p>
+  <div class="questions">
+    <li>What core product or service drives revenue? (no public breakdown available)</li>
+    <li>Are they growing headcount? Look for recent job postings or LinkedIn growth</li>
+    <li>Who are their key customers or partners? Check case studies, press releases</li>
+    <li>What recent hires or board changes signal strategic direction?</li>
+  </div>
+</div>"""
+
+
+def _no_gaps_content(report: GapReportOutput) -> str:
+    """Friendly message when no structural gaps were found."""
+    if report.data_quality == "sparse":
+        return '<p class="muted">Not enough public data to detect structural gaps. Use the questions above to probe during conversation.</p>'
+    return '<p class="muted">No material gaps between narrative and data at this level of analysis. Consider diving deeper into specific business units.</p>'
 
 
 def _scorecard_html(report: GapReportOutput) -> str:
     conf_pct = CONFIDENCE_PCT.get(report.confidence, 50)
     qual_pct = QUALITY_PCT.get(report.data_quality, 40)
     high = sum(1 for g in report.gaps if g.get("severity") == "high")
-    gap_score = min(100, len(report.gaps) * 25 + high * 15)
+    gap_count = len(report.gaps)
 
     def stat(label: str, val: str, pct: int, color: str) -> str:
-        return f"""
-        <div class="stat">
-          <label>{html.escape(label)}</label>
-          <div class="val">{html.escape(val)}</div>
-          <div class="bar"><div style="width:{pct}%;background:{color}"></div></div>
-        </div>"""
+        return f"""<div class="stat">
+  <label>{html.escape(label)}</label>
+  <div class="ring-wrap">{_ring_svg(pct, color, label)}</div>
+  <div class="val">{html.escape(val)}</div>
+</div>"""
 
     return f"""<div class="scorecard">
-      {stat("Confidence", report.confidence, conf_pct, "#3b82f6")}
-      {stat("Data quality", report.data_quality, qual_pct, "#34d399")}
-      {stat("Gaps found", str(len(report.gaps)), gap_score, "#a78bfa")}
-      {stat("High severity", str(high), min(100, high * 40), "#ef4444")}
-    </div>"""
+  {stat("Confidence", report.confidence, conf_pct, "#3b82f6")}
+  {stat("Data quality", report.data_quality, qual_pct, "#22d3a7")}
+  {stat("Gaps found", str(gap_count), min(100, gap_count * 20 + high * 10), "#a78bfa")}
+  {stat("High severity", str(high), min(100, high * 40), "#ef4444")}
+</div>"""
 
 
 def _gap_cards_html(gaps: list[dict]) -> str:
     parts = []
     for g in gaps:
         sev = g.get("severity", "low")
-        color = SEVERITY_COLORS.get(sev, "#94a3b8")
-        parts.append(f"""
-        <article class="gap-card" data-severity="{html.escape(sev)}">
-          <header>
-            <span class="severity-dot" style="background:{color}"></span>
-            <span class="gap-cat">{html.escape(g.get('category', 'gap'))}</span>
-            <span class="severity-badge">{html.escape(sev)}</span>
-          </header>
-          <p><strong>Claim</strong> — {html.escape(g.get('claim', ''))}</p>
-          <p><strong>Reality</strong> — {html.escape(g.get('reality', ''))}</p>
-          {f'<p class="note">{html.escape(g["note"])}</p>' if g.get('note') else ''}
-        </article>""")
-    return "".join(parts)
+        color = _severity_color(sev)
+        category = g.get("category", "gap")
+        claim = g.get("claim", "")
+        reality = g.get("reality", "")
+        note = g.get("note", "")
+        parts.append(
+            f"""<article class="gap-card" data-severity="{html.escape(sev)}">
+  <header>
+    <span class="severity-dot" style="background:{color}"></span>
+    <span class="gap-cat">{html.escape(category)}</span>
+    <span class="severity-badge">{html.escape(sev)}</span>
+  </header>
+  <div class="gap-row">
+    <div class="accent-bar" style="background:{color}"></div>
+    <div>
+      <span class="label">Claim</span>
+      {html.escape(claim)}
+    </div>
+  </div>
+  <div class="gap-row">
+    <div class="accent-bar" style="background:{color};opacity:0.5"></div>
+    <div>
+      <span class="label">Reality</span>
+      {html.escape(reality)}
+    </div>
+  </div>
+  {f'<p class="note">{html.escape(note)}</p>' if note else ''}
+</article>"""
+        )
+    return "\n".join(parts)
 
 
 def _gap_radar(gaps: list[dict]) -> str:
     counts = {"high": 0, "medium": 0, "low": 0}
     for g in gaps:
-        counts[g.get("severity", "low")] = counts.get(g.get("severity", "low"), 0) + 1
-    max_c = max(counts.values()) if gaps else 1
+        sev = g.get("severity", "low")
+        if sev in counts:
+            counts[sev] += 1
+    mx = max(counts.values()) if gaps else 1
     parts = []
-    for sev, color in SEVERITY_COLORS.items():
+    for sev in ("high", "medium", "low"):
         c = counts.get(sev, 0)
-        pct = (c / max_c * 100) if max_c else 0
-        parts.append(f"""
-        <div class="radar-row">
-          <span class="radar-label">{sev}</span>
-          <div class="radar-bar"><div class="radar-fill" style="width:{pct}%;background:{color}"></div></div>
-          <span>{c}</span>
-        </div>""")
+        pct = round(c / mx * 100) if mx else 0
+        parts.append(
+            f"""<div class="radar-row">
+  <span class="radar-label">{sev}</span>
+  <div class="radar-bar"><div class="radar-fill" style="width:{pct}%;background:{SEVERITY_COLORS.get(sev, '#94a3b8')}"></div></div>
+  <span>{c}</span>
+</div>"""
+        )
     return "".join(parts)
 
 
-def _checklist_html(points: list[str]) -> str:
+def _checklist_html(points: list[str], is_sparse: bool = False) -> str:
     if not points:
-        return "<li class='muted'>No talking points generated</li>"
-    return "".join(
+        if is_sparse:
+            return '<li class="muted">Data limited — lead with questions, not assertions</li>'
+        return '<li class="muted">No talking points generated</li>'
+    items = "".join(
         f'<li><label><input type="checkbox" /> {html.escape(tp)}</label></li>'
         for tp in points
     )
+    return items
 
 
 def _warnings_html(report: GapReportOutput) -> str:
     if not report.edge_warnings:
         return ""
     items = "".join(f"<li>{html.escape(w)}</li>" for w in report.edge_warnings)
-    return f'<div class="warnings"><strong>Edge-case notes</strong><ul>{items}</ul></div>'
+    return (
+        f'<div class="warnings"><strong>Edge-case notes</strong><ul>{items}</ul></div>'
+    )

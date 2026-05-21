@@ -1,30 +1,25 @@
-# Python
+
+build/
+data/*.json
+# Data outputs (keep the directory, ignore files)
+dist/
+.DS_Store
+*.egg-info/
+# Git
+# IDE
+.idea/
+# Misc downloads
+# OS
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-build/
-
-# Virtualenv
-.venv/
-venv/
-
-# Data outputs (keep the directory, ignore files)
-data/*.json
+# Python
 reports/*
 !reports/.gitkeep
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Git
-*.swp
 *.swo
-
-# Misc downloads
+*.swp
 *.tar.gz
+Thumbs.db
+.venv/
+venv/
+# Virtualenv
+.vscode/
