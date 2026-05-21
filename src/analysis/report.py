@@ -1,8 +1,5 @@
 """
-Report assembly: combines layers, gaps, and insights into the final output.
-
-The output format mirrors collect.py's CompanyReport structure so the two
-modules are interchangeable.
+Report assembly: combines layers, gaps, edge cases, and insights into final output.
 """
 
 import json
@@ -11,37 +8,35 @@ from datetime import datetime
 from typing import Optional
 
 from .layers import Layer1, Layer2, extract_layer1, extract_layer2
-from .gaps import GapReport, Gap, detect_gaps
+from .gaps import GapReport, detect_gaps
 from .insights import ReframingInsight, synthesize_insight
+from .edge_cases import EdgeCaseContext, analyze_edge_cases
 
 
 @dataclass
 class GapReportOutput:
-    """The final structured output from the analysis engine."""
-
     company_name: str = ""
     analyzed_at: str = ""
-    data_quality: str = ""  # "rich", "moderate", "sparse"
+    data_quality: str = ""
 
-    # Layer summaries
-    layer1_summary: str = ""  # What the company says
-    layer2_summary: str = ""  # What the data shows
+    layer1_summary: str = ""
+    layer2_summary: str = ""
 
-    # The reframing
     what_company_says: str = ""
     what_data_shows: str = ""
     interview_insight: str = ""
     key_tension: str = ""
-    confidence: str = ""  # "high", "medium", "low"
+    confidence: str = ""
 
-    # Detailed gaps
     gaps: list[dict] = field(default_factory=list)
-
-    # Talking points for interview prep
     talking_points: list[str] = field(default_factory=list)
-
-    # Source traceability
     data_sources: list[str] = field(default_factory=list)
+
+    # Analysis metadata
+    synthesis_mode: str = "template"
+    edge_flags: list[str] = field(default_factory=list)
+    edge_warnings: list[str] = field(default_factory=list)
+    enrichment_applied: bool = False
 
     def __post_init__(self):
         if not self.analyzed_at:
@@ -57,38 +52,38 @@ class GapReportOutput:
 def build_report(
     collector_output: dict,
     company_name: Optional[str] = None,
+    use_reference_enrichment: bool = True,
+    use_llm: bool = True,
 ) -> GapReportOutput:
-    """Build a complete gap report from live_collector output.
+    """Build a complete gap report from live_collector output."""
+    enriched, edge = analyze_edge_cases(
+        collector_output,
+        use_reference=use_reference_enrichment,
+    )
 
-    Args:
-        collector_output: The dict returned by live_collector.fetch_company()
-        company_name: Override company name (uses collector_output.company_name if not given)
+    name = company_name or enriched.get("company_name", "Unknown")
 
-    Returns:
-        GapReportOutput with all layers, gaps, and insights assembled
-    """
-    name = company_name or collector_output.get("company_name", "Unknown")
+    layer1 = extract_layer1(enriched)
+    layer2 = extract_layer2(enriched)
 
-    # Extract layers
-    layer1 = extract_layer1(collector_output)
-    layer2 = extract_layer2(collector_output)
+    gaps = detect_gaps(layer1, layer2, edge=edge, use_llm=use_llm)
+    insight = synthesize_insight(
+        layer1,
+        layer2,
+        gaps,
+        company_name=name,
+        edge_context=edge.summary,
+        use_llm=use_llm,
+    )
 
-    # Detect gaps
-    gaps = detect_gaps(layer1, layer2)
-
-    # Synthesize insight
-    insight = synthesize_insight(layer1, layer2, gaps, company_name=name)
-
-    # Collect sources
     sources = []
-    for src in collector_output.get("_sources", []):
+    for src in enriched.get("_sources", []):
         if isinstance(src, dict):
             if src.get("source"):
                 sources.append(src["source"])
             elif src.get("error"):
                 sources.append(f"error: {src['error']}")
 
-    # Assemble output
     return GapReportOutput(
         company_name=name,
         data_quality=layer2.data_quality,
@@ -111,4 +106,8 @@ def build_report(
         ],
         talking_points=insight.talking_points,
         data_sources=sources,
+        synthesis_mode=insight.synthesis_mode,
+        edge_flags=list(edge.flags),
+        edge_warnings=list(edge.warnings),
+        enrichment_applied=edge.enrichment_applied,
     )

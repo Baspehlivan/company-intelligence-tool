@@ -11,31 +11,42 @@ from typing import Optional
 
 @dataclass
 class Layer1:
-    """What the company says publicly."""
-
-    narrative: str = ""  # Synthesized self-description
+    narrative: str = ""
     tagline: str = ""
     mission: str = ""
     positioning: str = ""
-    claims: list[str] = field(default_factory=list)  # Extracted claims
+    claims: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Layer2:
-    """What the data shows."""
-
-    summary: str = ""  # Synthesized data story
+    summary: str = ""
     revenue_signal: str = ""
     growth_signal: str = ""
     funding_signal: str = ""
     market_signal: str = ""
     employee_signal: str = ""
     expansion_signal: str = ""
-    data_quality: str = ""  # "rich", "moderate", "sparse"
+    hq_location: str = ""
+    founded_year: Optional[int] = None
+    employee_count: Optional[int] = None
+    company_name: str = ""
+    data_quality: str = ""
+
+    def to_signals_dict(self) -> dict:
+        return {
+            "revenue": self.revenue_signal,
+            "growth": self.growth_signal,
+            "funding": self.funding_signal,
+            "market": self.market_signal,
+            "employees": self.employee_signal,
+            "hq": self.hq_location,
+            "founded_year": self.founded_year,
+            "expansion": self.expansion_signal,
+        }
 
 
 def extract_layer1(report: dict) -> Layer1:
-    """Extract Layer 1 (self-image) from a collector report dict."""
     sd = report.get("self_description", {})
     core = report.get("core_data", {})
 
@@ -45,7 +56,6 @@ def extract_layer1(report: dict) -> Layer1:
         positioning=sd.get("industry_positioning", ""),
     )
 
-    # Build narrative from available self-description fields
     parts = []
     if layer.tagline:
         parts.append(layer.tagline)
@@ -60,35 +70,41 @@ def extract_layer1(report: dict) -> Layer1:
         parts.append(core["description"])
 
     layer.narrative = " ".join(parts) if parts else "No public self-description available."
-
-    # Extract discrete claims from the narrative
     layer.claims = _extract_claims(layer.narrative)
-
     return layer
 
 
 def extract_layer2(report: dict) -> Layer2:
-    """Extract Layer 2 (data reality) from a collector report dict."""
     fin = report.get("financials", {})
     growth = report.get("growth_signals", {})
     market = report.get("market_position", {})
     core = report.get("core_data", {})
 
-    layer = Layer2()
+    layer = Layer2(company_name=report.get("company_name", ""))
+    layer.hq_location = core.get("hq_location") or ""
+    layer.founded_year = core.get("founded_year")
 
-    # Revenue signal
+    emp = core.get("employees")
+    if emp is not None:
+        try:
+            layer.employee_count = int(emp)
+            layer.employee_signal = f"{layer.employee_count:,} employees"
+        except (TypeError, ValueError):
+            layer.employee_signal = str(emp)
+
     rev = fin.get("revenue")
     if rev:
         if isinstance(rev, dict):
             years = sorted(rev.keys())
             if len(years) >= 2:
-                layer.revenue_signal = f"Revenue trend: {years[0]}={rev[years[0]]} -> {years[-1]}={rev[years[-1]]}"
+                layer.revenue_signal = (
+                    f"Revenue trend: {years[0]}={rev[years[0]]} -> {years[-1]}={rev[years[-1]]}"
+                )
             elif years:
                 layer.revenue_signal = f"Revenue: {rev[years[0]]}"
         else:
             layer.revenue_signal = str(rev)
 
-    # Funding signal
     if fin.get("funding_total"):
         parts = [f"Total funding: {fin['funding_total']}"]
         if fin.get("last_funding_round"):
@@ -97,7 +113,6 @@ def extract_layer2(report: dict) -> Layer2:
             parts.append(f"Investors: {', '.join(fin['notable_investors'])}")
         layer.funding_signal = "; ".join(parts)
 
-    # Growth signals
     growth_parts = []
     if growth.get("revenue_trend"):
         growth_parts.append(growth["revenue_trend"])
@@ -109,7 +124,6 @@ def extract_layer2(report: dict) -> Layer2:
         growth_parts.append(f"Expanding: {', '.join(growth['expansion_indicators'])}")
     layer.growth_signal = "; ".join(growth_parts) if growth_parts else ""
 
-    # Market signal
     if market.get("market"):
         layer.market_signal = market["market"]
     if market.get("competitors"):
@@ -117,48 +131,54 @@ def extract_layer2(report: dict) -> Layer2:
     if market.get("moat_description"):
         layer.market_signal += f" | Moat: {market['moat_description']}"
 
-    # Employee signal
-    if core.get("employees"):
-        layer.employee_signal = f"{core['employees']:,} employees"
-
-    # Expansion signal
     exp = growth.get("expansion_indicators", [])
     if exp:
         layer.expansion_signal = "; ".join(exp)
 
-    # Data quality assessment
-    filled = sum(1 for v in [
-        layer.revenue_signal, layer.funding_signal, layer.growth_signal,
-        layer.market_signal, layer.employee_signal
-    ] if v)
-    layer.data_quality = "rich" if filled >= 4 else ("moderate" if filled >= 2 else "sparse")
+    filled = sum(
+        1
+        for v in [
+            layer.revenue_signal,
+            layer.funding_signal,
+            layer.growth_signal,
+            layer.market_signal,
+            layer.employee_signal,
+        ]
+        if v
+    )
+    layer.data_quality = (
+        "rich" if filled >= 4 else ("moderate" if filled >= 2 else "sparse")
+    )
 
-    # Build summary
     summary_parts = [
-        s for s in [
-            layer.revenue_signal, layer.funding_signal, layer.growth_signal,
-            layer.employee_signal, layer.market_signal
-        ] if s
+        s
+        for s in [
+            layer.revenue_signal,
+            layer.funding_signal,
+            layer.growth_signal,
+            layer.employee_signal,
+            layer.market_signal,
+        ]
+        if s
     ]
-    layer.summary = " | ".join(summary_parts) if summary_parts else "Limited data available."
-
+    layer.summary = (
+        " | ".join(summary_parts) if summary_parts else "Limited data available."
+    )
     return layer
 
 
 def _extract_claims(text: str) -> list[str]:
-    """Extract discrete claims from company narrative text.
-
-    Looks for common positioning patterns: leadership claims, scale claims,
-    innovation claims, heritage claims, etc.
-    """
     claims = []
     text_lower = text.lower()
 
     claim_patterns = {
-        "leadership": ["leader", "leading", "market leader", "#1", "number one", "pioneer"],
+        "leadership": ["leader", "leading", "market leader", "#1", "number one", "pioneer", "largest"],
         "scale": ["global", "worldwide", "thousands of", "millions of", "100+", "1000+"],
         "heritage": ["founded in", "years of", "century", "heritage", "since 19", "since 20"],
-        "innovation": ["ai-powered", "innovative", "cutting-edge", "next-generation", "transform", "disrupt"],
+        "innovation": [
+            "ai-native", "ai powered", "ai-powered", "innovative", "cutting-edge",
+            "next-generation", "transform", "disrupt",
+        ],
         "growth": ["fastest-growing", "rapidly growing", "expanding", "scaling"],
         "trust": ["trusted", "reliable", "secure", "enterprise-grade", "fortune 500"],
         "full-service": ["end-to-end", "full-service", "comprehensive", "one-stop", "complete solution"],

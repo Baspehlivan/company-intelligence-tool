@@ -1,0 +1,25 @@
+# Legacy alias — see config/companies.yaml for full registry
+# Batch and demo load from companies.yaml first.
+
+targets:
+  - name: Rhenus
+    from_file: data/rhenus.json
+  - name: Buynomics
+    from_file: data/buynomics.json
+  - name: DHL Group
+    key: dhl
+    from_file: data/dhl.json
+    ticker: DPW.DE
+  - name: Apple
+    key: apple
+    from_file: data/apple.json
+    ticker: AAPL
+  - name: Celonis
+    key: celonis
+    from_file: data/celonis.json
+  - name: Personio
+    key: personio
+    from_file: data/personio.json
+  - name: Stripe
+    key: stripe
+    from_file: data/stripe.json

@@ -9,5 +9,6 @@ and produces a structured gap report:
 """
 
 from .engine import analyze_company, analyze_report
+from .report import GapReportOutput
 
-__all__ = ["analyze_company", "analyze_report"]
+__all__ = ["analyze_company", "analyze_report", "GapReportOutput"]

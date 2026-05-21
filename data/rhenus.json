@@ -1,50 +1,57 @@
 {
-  "company_name": "Rhenus",
-  "as_of": "2026-05-21T12:13:31.456369",
+  "company_name": "Rhenus Group",
+  "as_of": "2026-05-21T14:00:13.286459",
   "status": "private",
   "ticker": null,
   "self_description": {
-    "tagline": "",
+    "tagline": "Reliable traditional logistics partner with 100+ years of history",
     "mission": "",
-    "industry_positioning": "",
-    "public_statements": []
+    "industry_positioning": "Family-owned, full-service global logistics provider from German roots",
+    "public_statements": [
+      "We are a reliable, traditional logistics company with 100+ years of heritage.",
+      "End-to-end solutions for enterprise logistics managers worldwide."
+    ]
   },
   "core_data": {
-    "sector": "",
-    "industry": "",
-    "hq_location": "Germany, founded in",
-    "employees": null,
-    "founded_year": null,
-    "description": ""
+    "sector": "Logistics",
+    "industry": "Supply Chain / 4PL",
+    "hq_location": "Holzwickede, Germany",
+    "employees": 40000,
+    "founded_year": 1912,
+    "description": "Global logistics provider, mid-transformation into a 4PL platform"
   },
   "financials": {
-    "revenue": null,
+    "revenue": {
+      "2023": "7.50B EUR (est.)"
+    },
     "funding_total": null,
     "last_funding_round": null,
     "notable_investors": []
   },
   "growth_signals": {
-    "revenue_trend": "",
-    "employee_trend": "",
-    "recent_acquisitions": [],
-    "expansion_indicators": []
+    "revenue_trend": "Acquisition-driven expansion ~15-20% YoY",
+    "employee_trend": "40,000+ employees globally",
+    "recent_acquisitions": [
+      "Multiple contract logistics acquisitions 2023-2024 in Europe, Asia, Americas"
+    ],
+    "expansion_indicators": [
+      "4PL and supply chain orchestration",
+      "Warehousing growing faster than forwarding"
+    ]
   },
   "market_position": {
-    "competitors": [],
-    "market": "",
-    "moat_description": ""
+    "competitors": [
+      "DHL",
+      "Kuehne+Nagel",
+      "DB Schenker"
+    ],
+    "market": "Global contract logistics and forwarding",
+    "moat_description": "Scale, family ownership stability, European footprint"
   },
   "_sources": [
     {
-      "source": "duckduckgo",
-      "query": "Rhenus company funding employees",
-      "results": [
-        "Rhenus Group - 2026 Company Profile & Team - Tracxn",
-        "Rhenus Warehousing Solutions: Revenue, Worth, Valuation & Competitors 2026",
-        "Rhenus Group - Crunchbase Company Profile & Funding",
-        "Rhenus Group Company Profile | Management and Employees List - Datanyze",
-        "Rhenus logistics (Germany) 2026 Company Profile: Valuation, Funding ..."
-      ]
+      "source": "reference",
+      "note": "curated calibration data"
     }
   ]
 }

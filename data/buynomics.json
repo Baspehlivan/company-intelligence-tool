@@ -1,50 +1,54 @@
 {
   "company_name": "Buynomics",
-  "as_of": "2026-05-21T12:13:25.312019",
+  "as_of": "2026-05-21T14:00:13.286691",
   "status": "private",
   "ticker": null,
   "self_description": {
-    "tagline": "",
+    "tagline": "Consumer behavior simulation platform",
     "mission": "",
-    "industry_positioning": "",
-    "public_statements": []
+    "industry_positioning": "AI-powered consumer behavior simulation for CPG and retail \u2014 replace slow market research with predictive models",
+    "public_statements": [
+      "We help brands understand consumer decisions through simulation.",
+      "Data-driven pricing and assortment optimization."
+    ]
   },
   "core_data": {
-    "sector": "",
-    "industry": "",
-    "hq_location": "Cologne",
-    "employees": 73,
-    "founded_year": null,
-    "description": ""
+    "sector": "Fintech / SaaS",
+    "industry": "Consumer Behavior Simulation",
+    "hq_location": "Cologne, Germany",
+    "employees": 150,
+    "founded_year": 2018,
+    "description": "AI-powered consumer behavior simulation for CPG and retail"
   },
   "financials": {
     "revenue": null,
-    "funding_total": "$46.1M",
-    "last_funding_round": null,
-    "notable_investors": []
+    "funding_total": "EUR 45M+",
+    "last_funding_round": "Series B (EUR 30M, 2023)",
+    "notable_investors": [
+      "Eight Roads Ventures"
+    ]
   },
   "growth_signals": {
-    "revenue_trend": "",
-    "employee_trend": "",
+    "revenue_trend": "Post-Series B scaling; headcount doubling annually (est.)",
+    "employee_trend": "~100-200 employees, fast growing",
     "recent_acquisitions": [],
-    "expansion_indicators": []
+    "expansion_indicators": [
+      "North American expansion",
+      "Enterprise CPG partnerships"
+    ]
   },
   "market_position": {
-    "competitors": [],
-    "market": "",
-    "moat_description": ""
+    "competitors": [
+      "Traditional market research firms",
+      "Internal analytics teams"
+    ],
+    "market": "CPG pricing and assortment optimization",
+    "moat_description": "Simulation IP; sells to analysts while automating analyst workflows"
   },
   "_sources": [
     {
-      "source": "duckduckgo",
-      "query": "Buynomics company funding employees",
-      "results": [
-        "Buynomics - 2026 Company Profile, Team, Funding, Competitors ... - Tracxn",
-        "Buynomics 2026 Company Profile: Valuation, Funding & Investors | PitchBook",
-        "Buynomics - Crunchbase Company Profile & Funding",
-        "buynomics Revenue 2024: $6M ARR, $2.6M Raised - LATKA",
-        "buynomics - Growth Analysis & Alternative Companies - 2026"
-      ]
+      "source": "reference",
+      "note": "curated calibration data"
     }
   ]
 }

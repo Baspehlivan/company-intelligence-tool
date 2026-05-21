@@ -1,9 +1,5 @@
 """
 Reframing Analysis Engine — main orchestrator.
-
-Two entry points:
-  - analyze_company(name): runs collector + analysis in one call
-  - analyze_report(collector_output): analysis only, from existing collector data
 """
 
 import json
@@ -14,17 +10,18 @@ from typing import Optional
 from .report import GapReportOutput, build_report
 
 
-def analyze_report(collector_output: dict, company_name: Optional[str] = None) -> GapReportOutput:
-    """Analyze an existing collector output dict.
-
-    Args:
-        collector_output: Dict from live_collector.fetch_company() or loaded from JSON
-        company_name: Optional override for company name
-
-    Returns:
-        GapReportOutput with reframing analysis
-    """
-    return build_report(collector_output, company_name=company_name)
+def analyze_report(
+    collector_output: dict,
+    company_name: Optional[str] = None,
+    use_reference_enrichment: bool = True,
+    use_llm: bool = True,
+) -> GapReportOutput:
+    return build_report(
+        collector_output,
+        company_name=company_name,
+        use_reference_enrichment=use_reference_enrichment,
+        use_llm=use_llm,
+    )
 
 
 def analyze_company(
@@ -32,28 +29,19 @@ def analyze_company(
     ticker: Optional[str] = None,
     output_path: Optional[str] = None,
     pretty: bool = True,
+    use_reference_enrichment: bool = True,
+    use_llm: bool = True,
 ) -> GapReportOutput:
-    """Run collector + analysis in one call.
-
-    Args:
-        name: Company name to analyze
-        ticker: Optional stock ticker (skip auto-detect)
-        output_path: Optional path to save the JSON report
-        pretty: Pretty-print JSON output
-
-    Returns:
-        GapReportOutput with reframing analysis
-    """
-    # Import live collector
     from src.data_collector.live_collector import fetch_company
 
-    # Collect data
     collector_output = fetch_company(name, ticker=ticker)
+    report = analyze_report(
+        collector_output,
+        company_name=name,
+        use_reference_enrichment=use_reference_enrichment,
+        use_llm=use_llm,
+    )
 
-    # Analyze
-    report = analyze_report(collector_output, company_name=name)
-
-    # Save if requested
     if output_path:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -64,11 +52,10 @@ def analyze_company(
 
 
 def main():
-    """CLI entry point for the analysis engine."""
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="CIT Reframing Analysis Engine — produce gap reports from company data"
+        description="CIT Reframing Analysis Engine — gap reports from company data"
     )
     parser.add_argument("company", help="Company name to analyze")
     parser.add_argument("--ticker", "-t", help="Stock ticker (skip auto-detect)")
@@ -76,25 +63,43 @@ def main():
     parser.add_argument("--pretty", "-p", action="store_true", help="Pretty-print JSON")
     parser.add_argument(
         "--from-file", "-f",
-        help="Load collector output from JSON file instead of fetching live"
+        help="Load collector output from JSON instead of live fetch",
+    )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Use template synthesis only (no API calls)",
+    )
+    parser.add_argument(
+        "--no-enrich",
+        action="store_true",
+        help="Disable reference enrichment for sparse live data",
     )
 
     args = parser.parse_args()
+    use_llm = not args.no_llm
+    use_enrich = not args.no_enrich
 
     if args.from_file:
-        # Load from existing file
         data = json.loads(Path(args.from_file).read_text())
-        report = analyze_report(data, company_name=args.company)
+        report = analyze_report(
+            data,
+            company_name=args.company,
+            use_reference_enrichment=use_enrich,
+            use_llm=use_llm,
+        )
+        if args.output:
+            Path(args.output).write_text(report.to_json(indent=2))
     else:
-        # Live collection + analysis
         report = analyze_company(
             args.company,
             ticker=args.ticker,
             output_path=args.output,
             pretty=args.pretty,
+            use_reference_enrichment=use_enrich,
+            use_llm=use_llm,
         )
 
-    # Print to stdout if no output file or --pretty
     if args.pretty or not args.output:
         print(report.to_json(indent=2))
 

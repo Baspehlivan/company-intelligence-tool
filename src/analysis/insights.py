@@ -1,28 +1,27 @@
 """
 Insight synthesis: turn detected gaps into interview-ready reframing.
 
-Takes the gap report and produces a structured insight with:
-- What the company says (Layer 1 summary)
-- What the data shows (Layer 2 summary)
-- The reframing: how to talk about the gap in an interview context
+Uses LLM when configured (OPENAI_API_KEY / ANTHROPIC_API_KEY), else template fallback.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+
 from .layers import Layer1, Layer2
 from .gaps import GapReport, Gap
 
 
 @dataclass
 class ReframingInsight:
-    """The final synthesized output: interview-ready reframing."""
-
     what_company_says: str
     what_data_shows: str
     interview_insight: str
-    key_tension: str  # The single most important gap
-    confidence: str  # "high", "medium", "low" based on data quality
+    key_tension: str
+    confidence: str
     talking_points: list[str]
+    synthesis_mode: str = "template"  # "llm" | "template"
 
 
 def synthesize_insight(
@@ -30,51 +29,103 @@ def synthesize_insight(
     layer2: Layer2,
     gaps: GapReport,
     company_name: str = "The company",
+    edge_context: str = "",
+    use_llm: bool = True,
 ) -> ReframingInsight:
-    """Synthesize a reframing insight from layers and gaps.
-
-    This is the core intellectual work of the engine: taking the raw gaps
-    and turning them into an interview-ready narrative.
-    """
-    # Determine confidence from data quality
     confidence = {
         "rich": "high",
         "moderate": "medium",
         "sparse": "low",
     }.get(layer2.data_quality, "low")
 
-    # Build Layer 1 summary
-    what_says = _build_layer1_summary(layer1, company_name)
+    if use_llm:
+        llm_result = _synthesize_llm(
+            layer1, layer2, gaps, company_name, edge_context, confidence
+        )
+        if llm_result:
+            return llm_result
 
-    # Build Layer 2 summary
-    what_shows = _build_layer2_summary(layer2, company_name)
+    return _synthesize_template(layer1, layer2, gaps, company_name, confidence)
 
-    # Identify the key tension (highest severity gap)
-    key_tension = _identify_key_tension(gaps, layer1, layer2)
 
-    # Generate interview insight
-    interview_insight = _generate_interview_insight(
-        layer1, layer2, gaps, company_name, key_tension
+def _synthesize_llm(
+    layer1: Layer1,
+    layer2: Layer2,
+    gaps: GapReport,
+    company_name: str,
+    edge_context: str,
+    confidence: str,
+) -> Optional[ReframingInsight]:
+    from .llm import get_client
+    from .prompts import INSIGHT_SYSTEM, insight_user_prompt
+
+    client = get_client()
+    if not client.available:
+        return None
+
+    gap_dicts = [
+        {
+            "category": g.category,
+            "severity": g.severity,
+            "claim": g.claim,
+            "reality": g.reality,
+            "note": g.note,
+        }
+        for g in gaps.gaps
+    ]
+
+    payload = client.complete_json(
+        INSIGHT_SYSTEM,
+        insight_user_prompt(
+            company_name=company_name,
+            layer1_narrative=layer1.narrative,
+            layer1_claims=layer1.claims,
+            layer2_summary=layer2.summary,
+            layer2_signals=layer2.to_signals_dict(),
+            gaps=gap_dicts,
+            edge_context=edge_context,
+            data_quality=layer2.data_quality,
+        ),
     )
+    if not payload:
+        return None
 
-    # Generate talking points
-    talking_points = _generate_talking_points(layer1, layer2, gaps)
+    talking = payload.get("talking_points") or []
+    if isinstance(talking, str):
+        talking = [talking]
 
     return ReframingInsight(
-        what_company_says=what_says,
-        what_data_shows=what_shows,
-        interview_insight=interview_insight,
-        key_tension=key_tension,
+        what_company_says=payload.get("what_company_says") or _build_layer1_summary(layer1, company_name),
+        what_data_shows=payload.get("what_data_shows") or _build_layer2_summary(layer2, company_name),
+        interview_insight=payload.get("interview_insight") or "",
+        key_tension=payload.get("key_tension") or _identify_key_tension(gaps, layer1, layer2),
         confidence=confidence,
-        talking_points=talking_points,
+        talking_points=[str(t) for t in talking[:6]],
+        synthesis_mode=client.backend_name if client.backend_name != "none" else "llm",
     )
 
 
-# ── Builders ─────────────────────────────────────────────────────────────────
+def _synthesize_template(
+    layer1: Layer1,
+    layer2: Layer2,
+    gaps: GapReport,
+    company_name: str,
+    confidence: str,
+) -> ReframingInsight:
+    return ReframingInsight(
+        what_company_says=_build_layer1_summary(layer1, company_name),
+        what_data_shows=_build_layer2_summary(layer2, company_name),
+        interview_insight=_generate_interview_insight_template(
+            layer1, layer2, gaps, company_name
+        ),
+        key_tension=_identify_key_tension(gaps, layer1, layer2),
+        confidence=confidence,
+        talking_points=_generate_talking_points(layer1, layer2, gaps),
+        synthesis_mode="template",
+    )
 
 
 def _build_layer1_summary(layer1: Layer1, company_name: str) -> str:
-    """Summarize what the company says about itself."""
     if not layer1.narrative or layer1.narrative == "No public self-description available.":
         return f"{company_name} has limited public self-description available."
 
@@ -84,14 +135,11 @@ def _build_layer1_summary(layer1: Layer1, company_name: str) -> str:
     if layer1.positioning:
         parts.append(layer1.positioning)
     if layer1.claims:
-        claim_str = ", ".join(layer1.claims)
-        parts.append(f"Key claims: {claim_str}.")
-
+        parts.append(f"Key claims: {', '.join(layer1.claims)}.")
     return " ".join(parts)
 
 
 def _build_layer2_summary(layer2: Layer2, company_name: str) -> str:
-    """Summarize what the data shows."""
     if layer2.data_quality == "sparse":
         return f"Limited data available for {company_name}. Key metrics are sparse."
 
@@ -101,108 +149,88 @@ def _build_layer2_summary(layer2: Layer2, company_name: str) -> str:
     if layer2.funding_signal:
         parts.append(f"Funding: {layer2.funding_signal}.")
     if layer2.growth_signal:
-        parts.append(f"Growth signals: {layer2.growth_signal}.")
+        parts.append(f"Growth: {layer2.growth_signal}.")
     if layer2.employee_signal:
         parts.append(f"Team: {layer2.employee_signal}.")
     if layer2.market_signal:
         parts.append(f"Market: {layer2.market_signal}.")
-
     return " ".join(parts)
 
 
 def _identify_key_tension(gaps: GapReport, layer1: Layer1, layer2: Layer2) -> str:
-    """Find the single most important gap to highlight."""
     if not gaps.has_gaps:
-        # No gaps detected — still construct a tension from available data
         if layer2.data_quality == "sparse":
             return "Limited public data makes it hard to verify positioning claims."
         return "Public positioning and available data appear broadly aligned."
 
-    # Sort by severity
     severity_order = {"high": 0, "medium": 1, "low": 2}
     sorted_gaps = sorted(gaps.gaps, key=lambda g: severity_order.get(g.severity, 3))
-
     top = sorted_gaps[0]
     return f"{top.claim} — but {top.reality.lower()}"
 
 
-def _generate_interview_insight(
+def _generate_interview_insight_template(
     layer1: Layer1,
     layer2: Layer2,
     gaps: GapReport,
     company_name: str,
-    key_tension: str,
 ) -> str:
-    """Generate the interview-ready insight paragraph."""
+    key_tension = _identify_key_tension(gaps, layer1, layer2)
+
     if not gaps.has_gaps:
         if layer2.data_quality == "sparse":
             return (
-                f"Public data on {company_name} is limited. An interviewer would be impressed "
-                f"by someone who acknowledges this honestly and focuses on what can be verified — "
-                f"rather than speculating. Ask targeted questions about metrics that aren't public."
+                f"Public data on {company_name} is limited. An interviewer would value "
+                f"someone who acknowledges this honestly and asks targeted questions about "
+                f"metrics that aren't public — rather than speculating."
             )
         return (
-            f"{company_name}'s public positioning appears to align with available data. "
-            f"The reframing opportunity here is depth: go beyond what's publicly known "
-            f"by asking about the second-order effects of their strategy."
+            f"{company_name}'s public positioning appears aligned with available data. "
+            f"The reframing opportunity is depth: second-order effects of their strategy."
         )
 
-    # Build insight from top gaps
-    top_gaps = [g for g in gaps.gaps if g.severity in ("high", "medium")]
-    if not top_gaps:
-        top_gaps = gaps.gaps[:2]
+    top_gaps = [g for g in gaps.gaps if g.severity in ("high", "medium")] or gaps.gaps[:2]
+    best = top_gaps[0]
 
-    parts = []
+    category_hooks = {
+        "heritage_vs_transformation": (
+            f"See through the heritage positioning to active transformation underneath. {best.note}"
+        ),
+        "growth_mismatch": (
+            f"Articulate what's verifiable vs aspirational in growth claims. {best.note}"
+        ),
+        "scale_claim": (
+            f"Test scale claims against operational evidence (headcount, geo revenue). {best.note}"
+        ),
+        "leadership_vs_headcount": (
+            f"Clarify what 'leader' means — category, product, or corporate scale. {best.note}"
+        ),
+        "global_vs_regional": (
+            f"Ask for revenue by region, not marketing geography. {best.note}"
+        ),
+        "ai_native_vs_legacy": (
+            f"Distinguish AI wrapper on legacy process vs model-native product. {best.note}"
+        ),
+        "entity_scope": (
+            f"Confirm whether you're discussing the group, subsidiary, or product line. {best.note}"
+        ),
+        "identity_transition": (
+            f"Ask what changed post-acquisition/rebrand — old narrative may be stale. {best.note}"
+        ),
+    }
 
-    # Open with the key tension
-    parts.append(f"{company_name}'s public narrative vs. data reality:")
-    parts.append(key_tension + ".")
+    hook = category_hooks.get(
+        best.category,
+        f"Explore the tension: {best.note}" if best.note else "",
+    )
 
-    # Add the most interesting gap insight
-    best_gap = top_gaps[0]
-    if best_gap.category == "heritage_vs_transformation":
-        parts.append(
-            f"An interviewer would be struck by someone who sees through the heritage positioning "
-            f"to the active transformation underneath. {best_gap.note}"
-        )
-    elif best_gap.category == "growth_mismatch":
-        parts.append(
-            f"The growth claims deserve scrutiny. An interviewer would value someone who can "
-            f"articulate exactly what's verifiable vs. aspirational. {best_gap.note}"
-        )
-    elif best_gap.category == "scale_claim":
-        parts.append(
-            f"Scale claims vs. actual team size is a classic reframing opportunity. "
-            f"An interviewer would notice someone who asks the right questions about operational capacity. "
-            f"{best_gap.note}"
-        )
-    elif best_gap.category == "innovation_vs_stage":
-        parts.append(
-            f"Innovation positioning at an early stage creates a credibility gap. "
-            f"An interviewer would respect someone who can distinguish between genuine technical differentiation "
-            f"and marketing positioning. {best_gap.note}"
-        )
-    elif best_gap.category == "funding_silence":
-        parts.append(
-            f"The quiet funding story suggests the company lets its product speak. "
-            f"An interviewer would be impressed by someone who understands what the funding trajectory implies "
-            f"about investor confidence and runway. {best_gap.note}"
-        )
-    elif best_gap.category == "trust_vs_team":
-        parts.append(
-            f"Enterprise trust claims backed by a small team is a tension worth exploring. "
-            f"An interviewer would value someone who can discuss how scale and trust actually relate. "
-            f"{best_gap.note}"
-        )
-    else:
-        parts.append(
-            f"There's a gap worth exploring: {best_gap.note}" if best_gap.note else ""
-        )
-
-    # Close with confidence note
+    parts = [
+        f"{company_name}'s public narrative vs data reality: {key_tension}.",
+        hook,
+    ]
     if layer2.data_quality == "sparse":
         parts.append(
-            "(Note: data quality is limited — frame these observations as questions, not conclusions.)"
+            "(Data quality limited — frame as questions, not conclusions.)"
         )
 
     return " ".join(p for p in parts if p)
@@ -211,26 +239,21 @@ def _generate_interview_insight(
 def _generate_talking_points(
     layer1: Layer1, layer2: Layer2, gaps: GapReport
 ) -> list[str]:
-    """Generate concise talking points for interview use."""
     points = []
+    for gap in gaps.gaps:
+        if gap.severity in ("high", "medium"):
+            points.append(f"[{gap.category}] {gap.claim} vs {gap.reality}")
 
-    if gaps.has_gaps:
-        for gap in gaps.gaps:
-            if gap.severity in ("high", "medium"):
-                points.append(f"[{gap.category}] {gap.claim} vs. {gap.reality}")
-
-    # Always add a data quality note
     if layer2.data_quality == "sparse":
-        points.append("Data is sparse — position observations as questions, not assertions")
+        points.append("Data sparse — position observations as questions")
     elif layer2.data_quality == "rich":
-        points.append("Data is rich — strong foundation for specific, evidence-based observations")
+        points.append("Rich data — use specific metrics in answers")
 
-    # Add claim-based points
     if "heritage" in layer1.claims:
-        points.append("Heritage positioning may mask active transformation — ask about change velocity")
+        points.append("Heritage may mask transformation — ask about change velocity")
     if "innovation" in layer1.claims:
-        points.append("Innovation claims need product evidence — ask about adoption metrics")
+        points.append("Innovation claims need product evidence — ask adoption metrics")
     if "scale" in layer1.claims:
-        points.append("Scale claims should be tested against operational evidence")
+        points.append("Scale claims — ask geo/employee/revenue breakdown")
 
     return points

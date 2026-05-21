@@ -1,0 +1,68 @@
+# CIT company registry — single source for batch, demo, collect, compare
+#
+# Fields:
+#   key        — slug (filename: data/{key}.json, reports/{key}.html)
+#   name       — display / analysis name
+#   type       — public | private
+#   sector     — logistics | saas | enterprise | consumer_tech
+#   ticker     — optional, for live public fetch
+#   from_file  — optional collector JSON (relative to repo root)
+#   reference  — true if curated reference enrichment available
+
+companies:
+  - key: rhenus
+    name: Rhenus
+    type: private
+    sector: logistics
+    from_file: data/rhenus.json
+    reference: true
+
+  - key: buynomics
+    name: Buynomics
+    type: private
+    sector: saas
+    from_file: data/buynomics.json
+    reference: true
+
+  - key: dhl
+    name: DHL Group
+    type: public
+    sector: logistics
+    ticker: DPW.DE
+    from_file: data/dhl.json
+    reference: true
+
+  - key: apple
+    name: Apple
+    type: public
+    sector: consumer_tech
+    ticker: AAPL
+    from_file: data/apple.json
+    reference: true
+
+  - key: celonis
+    name: Celonis
+    type: private
+    sector: enterprise
+    from_file: data/celonis.json
+    reference: true
+
+  - key: personio
+    name: Personio
+    type: private
+    sector: saas
+    from_file: data/personio.json
+    reference: true
+
+  - key: stripe
+    name: Stripe
+    type: private
+    sector: fintech
+    from_file: data/stripe.json
+    reference: true
+
+# Pairwise compares generated in demo/batch (slug_a vs slug_b)
+compare_pairs:
+  - [rhenus, dhl]
+  - [buynomics, personio]
+  - [celonis, stripe]
