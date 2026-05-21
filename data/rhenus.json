@@ -1,0 +1,50 @@
+{
+  "company_name": "Rhenus",
+  "as_of": "2026-05-21T12:13:31.456369",
+  "status": "private",
+  "ticker": null,
+  "self_description": {
+    "tagline": "",
+    "mission": "",
+    "industry_positioning": "",
+    "public_statements": []
+  },
+  "core_data": {
+    "sector": "",
+    "industry": "",
+    "hq_location": "Germany, founded in",
+    "employees": null,
+    "founded_year": null,
+    "description": ""
+  },
+  "financials": {
+    "revenue": null,
+    "funding_total": null,
+    "last_funding_round": null,
+    "notable_investors": []
+  },
+  "growth_signals": {
+    "revenue_trend": "",
+    "employee_trend": "",
+    "recent_acquisitions": [],
+    "expansion_indicators": []
+  },
+  "market_position": {
+    "competitors": [],
+    "market": "",
+    "moat_description": ""
+  },
+  "_sources": [
+    {
+      "source": "duckduckgo",
+      "query": "Rhenus company funding employees",
+      "results": [
+        "Rhenus Group - 2026 Company Profile & Team - Tracxn",
+        "Rhenus Warehousing Solutions: Revenue, Worth, Valuation & Competitors 2026",
+        "Rhenus Group - Crunchbase Company Profile & Funding",
+        "Rhenus Group Company Profile | Management and Employees List - Datanyze",
+        "Rhenus logistics (Germany) 2026 Company Profile: Valuation, Funding ..."
+      ]
+    }
+  ]
+}

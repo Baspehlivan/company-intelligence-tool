@@ -1,0 +1,50 @@
+{
+  "company_name": "Buynomics",
+  "as_of": "2026-05-21T12:13:25.312019",
+  "status": "private",
+  "ticker": null,
+  "self_description": {
+    "tagline": "",
+    "mission": "",
+    "industry_positioning": "",
+    "public_statements": []
+  },
+  "core_data": {
+    "sector": "",
+    "industry": "",
+    "hq_location": "Cologne",
+    "employees": 73,
+    "founded_year": null,
+    "description": ""
+  },
+  "financials": {
+    "revenue": null,
+    "funding_total": "$46.1M",
+    "last_funding_round": null,
+    "notable_investors": []
+  },
+  "growth_signals": {
+    "revenue_trend": "",
+    "employee_trend": "",
+    "recent_acquisitions": [],
+    "expansion_indicators": []
+  },
+  "market_position": {
+    "competitors": [],
+    "market": "",
+    "moat_description": ""
+  },
+  "_sources": [
+    {
+      "source": "duckduckgo",
+      "query": "Buynomics company funding employees",
+      "results": [
+        "Buynomics - 2026 Company Profile, Team, Funding, Competitors ... - Tracxn",
+        "Buynomics 2026 Company Profile: Valuation, Funding & Investors | PitchBook",
+        "Buynomics - Crunchbase Company Profile & Funding",
+        "buynomics Revenue 2024: $6M ARR, $2.6M Raised - LATKA",
+        "buynomics - Growth Analysis & Alternative Companies - 2026"
+      ]
+    }
+  ]
+}
