@@ -1,6 +1,6 @@
-"""Shared CIT HTML theme — v2 (modern, sparse-aware, print-ready)."""
+"""Shared CIT HTML theme — v3 with gap matrix and scroll animations."""
 
-CIT_CSS = """
+CIT_CSS_V3 = """
 :root {
   --bg: #0b0f17;
   --surface: #141b2b;
@@ -31,7 +31,7 @@ CIT_CSS = """
   --shadow: 0 2px 16px rgba(15,23,42,0.06);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -47,6 +47,17 @@ a:hover { text-decoration: underline; }
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem clamp(0.75rem, 3vw, 2.5rem) 3rem;
+}
+
+/* === Fade-in animations === */
+.fade-in {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* === Topbar === */
@@ -94,7 +105,7 @@ a:hover { text-decoration: underline; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.ok { border-color: var(--green); color: var(--green); transition: none; }
 
-/* === Scorecard (v2 — compact rings) === */
+/* === Scorecard === */
 .scorecard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -134,7 +145,7 @@ a:hover { text-decoration: underline; }
 }
 .stat .ring svg { width: 36px; height: 36px; transform: rotate(-90deg); }
 .stat .ring .bg { fill: none; stroke: var(--surface2); stroke-width: 3; }
-.stat .ring .fg { fill: none; stroke-width: 3; stroke-linecap: round; }
+.stat .ring .fg { fill: none; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
 .stat .ring .pct {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -157,7 +168,7 @@ a:hover { text-decoration: underline; }
 .chip.green { color: var(--green); border-color: var(--green); }
 .chip.high { color: var(--red); border-color: #ef444444; }
 
-/* === Report overview (NEW) === */
+/* === Report overview === */
 .report-overview {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -244,7 +255,63 @@ a:hover { text-decoration: underline; }
 }
 .insight-body { font-size: 0.92rem; line-height: 1.7; }
 
-/* === Reframing bridge (v2 — better visual) === */
+/* === Gap matrix (NEW v3) === */
+.gap-matrix {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+.matrix-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+}
+.matrix-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.matrix-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr 5rem;
+  gap: 0.6rem;
+  align-items: center;
+}
+.matrix-cat {
+  font-size: 0.75rem;
+  color: var(--text);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.matrix-bar {
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.matrix-fill {
+  height: 100%;
+  border-radius: 4px;
+  animation: matrixGrow 0.6s ease forwards;
+}
+@keyframes matrixGrow {
+  from { width: 0 !important; }
+}
+.matrix-badge {
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+/* === Reframing bridge === */
 .reframe-bridge {
   display: grid;
   grid-template-columns: 1fr 44px 1fr;
@@ -321,15 +388,16 @@ section > h2 .count {
 .radar-bar { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
 .radar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 
-/* === Gap cards (v2 — better readability) === */
+/* === Gap cards === */
 .gaps-grid { display: grid; gap: 0.65rem; }
 .gap-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.9rem 1.1rem;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, border-color 0.2s;
 }
+.gap-card:hover { border-color: var(--accent-muted); }
 .gap-card.hidden { display: none; }
 .gap-card header {
   display: flex;
@@ -342,11 +410,11 @@ section > h2 .count {
   font-weight: 600;
   font-size: 0.82rem;
   flex: 1;
+  font-family: ui-monospace, monospace;
 }
 .severity-badge {
   font-size: 0.6rem;
   text-transform: uppercase;
-  color: var(--text-dim);
   padding: 0.08rem 0.35rem;
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -354,7 +422,7 @@ section > h2 .count {
 }
 .gap-card .gap-row {
   display: grid;
-  grid-template-columns: 4px 1fr;
+  grid-template-columns: 3px 1fr;
   gap: 0.4rem;
   margin-top: 0.25rem;
   font-size: 0.84rem;
@@ -439,19 +507,22 @@ footer {
   .toolbar, .nav-pills, .gap-filters { display: none !important; }
   .wrap { max-width: 100%; padding: 0.75in; }
   .topbar h1 { font-size: 1.4rem; }
+  .fade-in { opacity: 1 !important; transform: none !important; }
   .scorecard { grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
   .stat { box-shadow: none; border: 1px solid #d0d9e8; padding: 0.5rem; }
   .stat .ring { width: 28px; height: 28px; }
   .stat .ring svg { width: 28px; height: 28px; }
-  .gap-card { break-inside: avoid; }
+  .gap-card { break-inside: avoid; border-color: #d0d9e8; }
+  .gap-card:hover { border-color: #d0d9e8; }
   .insight-box { break-inside: avoid; box-shadow: none; border: 1px solid #d0d9e8; background: #f0f4fa !important; }
   .sparse-notice { background: #f0f4fa !important; border: 1px solid #3b82f6; }
   .reframe-bridge { break-inside: avoid; }
   .layer { box-shadow: none; }
+  .matrix-fill { animation: none !important; }
 }
 """
 
-CIT_JS = """
+CIT_JS_V3 = """
 function toggleTheme() {
   var b = document.body;
   b.dataset.theme = b.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -481,6 +552,21 @@ function filterGaps(sev) {
   var saved = localStorage.getItem('cit-theme');
   if (saved) document.body.dataset.theme = saved;
   filterGaps('all');
+  // Scroll-triggered fade-in
+  if ('IntersectionObserver' in window) {
+    var els = document.querySelectorAll('.fade-in');
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+      });
+    }, { threshold: 0.1 });
+    els.forEach(function(el) { observer.observe(el); });
+    // Manually show elements already in view
+    setTimeout(function() { els.forEach(function(el) {
+      var rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    }); }, 50);
+  } else { document.querySelectorAll('.fade-in').forEach(function(e) { e.classList.add('visible'); }); }
 })();
 """
 
@@ -488,3 +574,7 @@ SEVERITY_COLORS = {"high": "#ef4444", "medium": "#f59e0b", "low": "#22c55e"}
 
 QUALITY_PCT = {"rich": 90, "moderate": 55, "sparse": 25}
 CONFIDENCE_PCT = {"high": 85, "medium": 55, "low": 30}
+
+# Backward-compat aliases
+CIT_CSS = CIT_CSS_V3
+CIT_JS = CIT_JS_V3
