@@ -32,6 +32,8 @@ class Layer2:
     employee_count: Optional[int] = None
     company_name: str = ""
     data_quality: str = ""
+    sector: str = ""
+    description: str = ""
 
     def to_signals_dict(self) -> dict:
         return {
@@ -69,7 +71,9 @@ def extract_layer1(report: dict) -> Layer1:
     if core.get("description") and not parts:
         parts.append(core["description"])
 
-    layer.narrative = " ".join(parts) if parts else "No public self-description available."
+    layer.narrative = (
+        " ".join(parts) if parts else "No public self-description available."
+    )
     layer.claims = _extract_claims(layer.narrative)
     return layer
 
@@ -83,6 +87,8 @@ def extract_layer2(report: dict) -> Layer2:
     layer = Layer2(company_name=report.get("company_name", ""))
     layer.hq_location = core.get("hq_location") or ""
     layer.founded_year = core.get("founded_year")
+    layer.sector = core.get("sector") or ""
+    layer.description = core.get("description") or ""
 
     emp = core.get("employees")
     if emp is not None:
@@ -97,9 +103,7 @@ def extract_layer2(report: dict) -> Layer2:
         if isinstance(rev, dict):
             years = sorted(rev.keys())
             if len(years) >= 2:
-                layer.revenue_signal = (
-                    f"Revenue trend: {years[0]}={rev[years[0]]} -> {years[-1]}={rev[years[-1]]}"
-                )
+                layer.revenue_signal = f"Revenue trend: {years[0]}={rev[years[0]]} -> {years[-1]}={rev[years[-1]]}"
             elif years:
                 layer.revenue_signal = f"Revenue: {rev[years[0]]}"
         else:
@@ -172,16 +176,50 @@ def _extract_claims(text: str) -> list[str]:
     text_lower = text.lower()
 
     claim_patterns = {
-        "leadership": ["leader", "leading", "market leader", "#1", "number one", "pioneer", "largest"],
-        "scale": ["global", "worldwide", "thousands of", "millions of", "100+", "1000+"],
-        "heritage": ["founded in", "years of", "century", "heritage", "since 19", "since 20"],
+        "leadership": [
+            "leader",
+            "leading",
+            "market leader",
+            "#1",
+            "number one",
+            "pioneer",
+            "largest",
+        ],
+        "scale": [
+            "global",
+            "worldwide",
+            "thousands of",
+            "millions of",
+            "100+",
+            "1000+",
+        ],
+        "heritage": [
+            "founded in",
+            "years of",
+            "century",
+            "heritage",
+            "since 19",
+            "since 20",
+        ],
         "innovation": [
-            "ai-native", "ai powered", "ai-powered", "innovative", "cutting-edge",
-            "next-generation", "transform", "disrupt",
+            "ai-native",
+            "ai powered",
+            "ai-powered",
+            "innovative",
+            "cutting-edge",
+            "next-generation",
+            "transform",
+            "disrupt",
         ],
         "growth": ["fastest-growing", "rapidly growing", "expanding", "scaling"],
         "trust": ["trusted", "reliable", "secure", "enterprise-grade", "fortune 500"],
-        "full-service": ["end-to-end", "full-service", "comprehensive", "one-stop", "complete solution"],
+        "full-service": [
+            "end-to-end",
+            "full-service",
+            "comprehensive",
+            "one-stop",
+            "complete solution",
+        ],
     }
 
     for category, keywords in claim_patterns.items():

@@ -38,6 +38,11 @@ class GapReportOutput:
     edge_warnings: list[str] = field(default_factory=list)
     enrichment_applied: bool = False
 
+    # v3 enhancements
+    strong_gap_label: str = ""
+    gap_count: int = 0
+    high_severity_count: int = 0
+
     def __post_init__(self):
         if not self.analyzed_at:
             self.analyzed_at = datetime.now().isoformat()
@@ -101,6 +106,7 @@ def build_report(
                 "claim": g.claim,
                 "reality": g.reality,
                 "note": g.note,
+                "strong_label": g.strong_label,
             }
             for g in gaps.gaps
         ],
@@ -110,4 +116,7 @@ def build_report(
         edge_flags=list(edge.flags),
         edge_warnings=list(edge.warnings),
         enrichment_applied=edge.enrichment_applied,
+        strong_gap_label=insight.strong_gap_label,
+        gap_count=insight.gap_count,
+        high_severity_count=insight.high_severity_count,
     )

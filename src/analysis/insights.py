@@ -21,7 +21,10 @@ class ReframingInsight:
     key_tension: str
     confidence: str
     talking_points: list[str]
+    strong_gap_label: str = ""
     synthesis_mode: str = "template"  # "llm" | "template"
+    gap_count: int = 0
+    high_severity_count: int = 0
 
 
 def synthesize_insight(
@@ -43,6 +46,10 @@ def synthesize_insight(
             layer1, layer2, gaps, company_name, edge_context, confidence
         )
         if llm_result:
+            llm_result.gap_count = len(gaps.gaps)
+            llm_result.high_severity_count = gaps.high_severity_count
+            if not llm_result.strong_gap_label:
+                llm_result.strong_gap_label = gaps.strong_gap_label
             return llm_result
 
     return _synthesize_template(layer1, layer2, gaps, company_name, confidence)
@@ -95,13 +102,19 @@ def _synthesize_llm(
         talking = [talking]
 
     return ReframingInsight(
-        what_company_says=payload.get("what_company_says") or _build_layer1_summary(layer1, company_name),
-        what_data_shows=payload.get("what_data_shows") or _build_layer2_summary(layer2, company_name),
+        what_company_says=payload.get("what_company_says")
+        or _build_layer1_summary(layer1, company_name),
+        what_data_shows=payload.get("what_data_shows")
+        or _build_layer2_summary(layer2, company_name),
         interview_insight=payload.get("interview_insight") or "",
-        key_tension=payload.get("key_tension") or _identify_key_tension(gaps, layer1, layer2),
+        key_tension=payload.get("key_tension")
+        or _identify_key_tension(gaps, layer1, layer2),
         confidence=confidence,
         talking_points=[str(t) for t in talking[:6]],
+        strong_gap_label=payload.get("strong_gap_label") or "",
         synthesis_mode=client.backend_name if client.backend_name != "none" else "llm",
+        gap_count=len(gaps.gaps),
+        high_severity_count=gaps.high_severity_count,
     )
 
 
@@ -122,11 +135,17 @@ def _synthesize_template(
         confidence=confidence,
         talking_points=_generate_talking_points(layer1, layer2, gaps),
         synthesis_mode="template",
+        strong_gap_label=gaps.strong_gap_label,
+        gap_count=len(gaps.gaps),
+        high_severity_count=gaps.high_severity_count,
     )
 
 
 def _build_layer1_summary(layer1: Layer1, company_name: str) -> str:
-    if not layer1.narrative or layer1.narrative == "No public self-description available.":
+    if (
+        not layer1.narrative
+        or layer1.narrative == "No public self-description available."
+    ):
         return f"{company_name} has limited public self-description available."
 
     parts = [f"{company_name} positions itself as:"]
@@ -189,7 +208,9 @@ def _generate_interview_insight_template(
             f"The reframing opportunity is depth: second-order effects of their strategy."
         )
 
-    top_gaps = [g for g in gaps.gaps if g.severity in ("high", "medium")] or gaps.gaps[:2]
+    top_gaps = [g for g in gaps.gaps if g.severity in ("high", "medium")] or gaps.gaps[
+        :2
+    ]
     best = top_gaps[0]
 
     category_hooks = {
@@ -229,9 +250,7 @@ def _generate_interview_insight_template(
         hook,
     ]
     if layer2.data_quality == "sparse":
-        parts.append(
-            "(Data quality limited — frame as questions, not conclusions.)"
-        )
+        parts.append("(Data quality limited — frame as questions, not conclusions.)")
 
     return " ".join(p for p in parts if p)
 
