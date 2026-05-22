@@ -1,13 +1,16 @@
 # Company Intelligence Tool (CIT)
 
-A reframing engine that takes a company name and produces a structured intelligence report.  
-**Purpose:** Interview preparation + portfolio project demonstrating econometric analysis skills.
+A reframing engine that takes a company name and produces a structured intelligence report. It systematically separates what a company says about itself (Layer 1) from what the data actually shows (Layer 2), then surfaces the gaps as actionable insight.
+
+**Use cases:** competitive analysis, investment research, due diligence, sourcing, interview preparation.
 
 ## Core Logic: The Reframing Engine
 
-- **Layer 1:** What does the company say about itself? (public statements, positioning, annual reports)
-- **Layer 2:** What do financials and growth data actually show?
-- **Output:** The gap between these two — expressed as interview-ready insight
+- **Layer 1:** What does the company say about itself? (public statements, positioning, annual reports, mission)
+- **Layer 2:** What do financials, growth, and market data actually show? (revenue trends, margins, employee efficiency, funding patterns)
+- **Output:** The gap between these two — expressed as structured, diagnostic insight with 27+ heuristic detectors
+
+The reframing is universal: it works for public companies with tickers (via yfinance + EDGAR XBRL), private companies with sparse web data (via DuckDuckGo extraction + curated references), and everything in between.
 
 ## Architecture
 
@@ -23,7 +26,25 @@ A reframing engine that takes a company name and produces a structured intellige
 - **Public path** (has ticker): Uses `yfinance` for financial statements, key metrics, stock history, description
 - **Private path** (no ticker): Uses web search (DuckDuckGo) + structured extraction for funding, employees, HQ
 
-Both paths return the same normalized JSON schema. The analysis engine doesn't need to know which path was used.
+Both paths return the same normalized JSON schema. The analysis engine does not need to know which path was used.
+
+### Reframing Engine — 27+ Gap Detectors
+
+Each detector maps to a specific business judgment dimension:
+
+| Detector | What it catches |
+|----------|----------------|
+| Revenue per Employee | Productivity gap — headcount vs output |
+| Claim Consistency | Layer 1 vs Layer 2 contradiction |
+| Funding Efficiency | Capital efficiency vs burn rate |
+| ESG Posture | Sustainability claims vs disclosure depth |
+| Customer Concentration | Whale dependency risk |
+| Moat Analysis | Competitive advantage — genuine vs claimed |
+| Market Timing | Sector tailwind vs execution quality |
+| Complexity Denial | Product sprawl vs organizational maturity |
+| Regulatory Posture | Compliance narrative vs actual footprint |
+
+... plus 20 more spanning financial health, growth quality, management credibility, and competitive positioning.
 
 ## Usage
 
@@ -57,17 +78,27 @@ cit/
 ├── reports/                  # Generated HTML, JSON, exports
 └── src/
     ├── data_collector/       # Live connector + reference snapshots
-    ├── analysis/             # Reframing engine (OpenClaude)
+    │   ├── live_collector.py # Orchestrator: Wikipedia → Crunchbase → DDG → EDGAR
+    │   ├── edgar.py          # SEC EDGAR XBRL financials
+    │   ├── wikipedia.py      # Wikipedia API client
+    │   ├── market.py         # Market data collection
+    │   ├── reference.py      # Curated snapshots (30 companies)
+    │   └── yfinance_financials.py  # yfinance financial extraction
+    ├── analysis/             # Reframing engine
+    │   ├── layers.py         # Layer 1 (narrative) + Layer 2 (data) extraction
+    │   ├── gaps.py           # 27+ heuristic + semantic gap detectors
+    │   ├── insights.py       # Interview insight synthesis
+    │   ├── report.py         # GapReportOutput dataclass + build_report()
+    │   ├── edge_cases.py     # Sparse data handling and fallback logic
+    │   └── llm.py            # LLM backends (openclaude / litellm)
     ├── output/               # HTML, dashboard, exports, compare
+    │   ├── html_report.py    # Professional HTML report with financial panels
+    │   ├── theme.py          # Dark/light theme with financial visualization
+    │   └── dashboard.py      # Terminal dashboard
     └── cit/                  # Unified CLI + FastAPI
+        ├── cli.py            # CLI dispatcher
+        └── companies.py      # Company registry management
 ```
-
-## Team
-
-- **Claude** — strategy & mapping, reframing logic design
-- **Hermes** — persistent memory, automation, scheduled collection
-- **Kiro** — spec-driven analysis engine
-- **Cursor / Windsurf** — output modules
 
 ## Analysis Engine
 
@@ -90,27 +121,6 @@ python -m src.analysis "Buynomics" --pretty -o reports/buynomics.json
 | `-f` / `--from-file` | Analyze existing collector JSON |
 
 Environment: `CIT_LLM_BACKEND=auto|openclaude|litellm`, `CIT_LLM_MODEL`, API keys for litellm
-
-## OpenClaude + Cursor split
-
-| Agent | Scope |
-|-------|--------|
-| **OpenClaude** (terminal in `~/cit`) | `src/analysis/`, collectors, gaps, LLM prompts — reads `CLAUDE.md` |
-| **Cursor** | `src/output/`, `./cit` CLI, HTML/dashboard/API |
-
-**Handoff to OpenClaude:**
-```bash
-./cit delegate "Add a gap detector for pre-2015 AI-native claims"
-# In your openclaude session: read .openclaude/inbox/TASK.md
-```
-
-**Use OpenClaude as LLM backend** (uses your `/provider` + `.openclaude-profile.json`):
-```bash
-export CIT_LLM_BACKEND=openclaude
-./cit report Rhenus -f data/rhenus.json --pretty
-```
-
-Project profile: `.openclaude-profile.json` (Gitlawb Opengateway / mimo-v2.5-pro). API key stays in your OpenClaude provider config, not in git.
 
 ## CIT CLI (output layer)
 
@@ -180,8 +190,16 @@ python -m src.data_collector.seed
 - Executive scorecard (confidence, data quality, gap counts)
 - Layer 1 ⟷ Layer 2 reframing bridge
 - Filterable gaps (high / medium / low)
+- 27+ diagnostic detectors with strong label categorization
 - Copy interview insight · dark/light theme · print-ready
 
-## Next
+## Technology
 
-- Scheduled cron jobs for target companies
+- **Python** — core engine (pandas, yfinance, requests, beautifulsoup4)
+- **SEC EDGAR XBRL** — direct financial statement extraction (no API key required)
+- **Multi-agent split** — OpenClaude (analysis engine), Cursor (output layer), Hermes (automation)
+- **Two-path data normalization** — same schema for public and private companies
+
+## License
+
+MIT

@@ -143,12 +143,11 @@ def _check_subsidiary_signals(report: dict, ctx: EdgeCaseContext) -> None:
     # e.g. "Rhenus Warehousing Solutions" under Rhenus Group
     if any(h in name for h in ("solutions", "services", "digital", "labs", "ventures")):
         parent_guess = name.split()[0] if name.split() else ""
-        if parent_guess and parent_guess not in name.replace(parent_guess, "", 1):
-            pass
-        ctx.flags.append("possible_brand_line")
-        ctx.warnings.append(
-            "Name suggests a business line or subsidiary — verify whether data applies to whole group"
-        )
+        if parent_guess:
+            ctx.flags.append("possible_brand_line")
+            ctx.warnings.append(
+                "Name suggests a business line or subsidiary — verify whether data applies to whole group"
+            )
 
 
 def _check_rename_acquisition(report: dict, ctx: EdgeCaseContext) -> None:

@@ -240,9 +240,13 @@ def fetch_private_company(company_name: str) -> dict:
 
     Uses requests + basic HTML parsing to search Crunchbase and general web
     for company info. Falls back gracefully if sources are unreachable.
+    Enriches with Wikipedia data when available.
     """
     report = empty_report(company_name)
     report["status"] = "private"
+
+    # ── Wikipedia enrichment (fast, structured, no HTML parsing) ──
+    _enrich_from_wikipedia(company_name, report)
 
     try:
         import requests
@@ -274,31 +278,31 @@ def fetch_private_company(company_name: str) -> dict:
             soup = BeautifulSoup(resp.text, "html.parser")
             text = soup.get_text(separator=" ", strip=True)
 
-            # Try to extract description (Crunchbase meta description)
-            meta_desc = soup.find("meta", attrs={"name": "description"})
-            if meta_desc and meta_desc.get("content"):
-                report["core_data"]["description"] = meta_desc["content"]
-                report["self_description"]["industry_positioning"] = meta_desc[
-                    "content"
-                ][:200]
+            if not report["core_data"]["description"]:
+                meta_desc = soup.find("meta", attrs={"name": "description"})
+                if meta_desc and meta_desc.get("content"):
+                    report["core_data"]["description"] = meta_desc["content"]
+                    report["self_description"]["industry_positioning"] = meta_desc[
+                        "content"
+                    ][:200]
 
-            # Try to extract funding info from page text
-            funding_patterns = [
-                r"(\$[\d,.]+[MBK]?)\s+(?:in\s+)?(?:Funding|Series [A-Z]|Seed|Venture)",
-                r"(?:Funding|Raised)\s*(?:of\s*)?(\$[\d,.]+[MBK]?)",
-                r"(?:Series [A-Z]|Seed)\s*(?:round\s*)?(?:of\s*)?(\$[\d,.]+[MBK]?)",
-            ]
-            for pat in funding_patterns:
-                m = re.search(pat, text, re.IGNORECASE)
-                if m:
-                    report["financials"]["funding_total"] = m.group(1)
-                    break
+            if not report["financials"]["funding_total"]:
+                funding_patterns = [
+                    r"(\$[\d,.]+[MBK]?)\s+(?:in\s+)?(?:Funding|Series [A-Z]|Seed|Venture)",
+                    r"(?:Funding|Raised)\s*(?:of\s*)?(\$[\d,.]+[MBK]?)",
+                    r"(?:Series [A-Z]|Seed)\s*(?:round\s*)?(?:of\s*)?(\$[\d,.]+[MBK]?)",
+                ]
+                for pat in funding_patterns:
+                    m = re.search(pat, text, re.IGNORECASE)
+                    if m:
+                        report["financials"]["funding_total"] = m.group(1)
+                        break
 
             report["_sources"].append({"source": "crunchbase", "url": cb_url})
     except Exception as e:
         report["_sources"].append({"source": "crunchbase", "error": str(e)})
 
-    # ── Google web search ──
+    # ── DuckDuckGo web search ──
     search_url = (
         f"https://html.duckduckgo.com/html/?q={safe_name}+company+funding+employees"
     )
@@ -311,7 +315,6 @@ def fetch_private_company(company_name: str) -> dict:
             for a in snippets[:10]:
                 results.append(a.get_text(strip=True))
 
-            # Also try result snippets
             snippets_b = soup.find_all("a", class_="result__snippet")
             for s in snippets_b[:5]:
                 results.append(s.get_text(strip=True))
@@ -324,35 +327,72 @@ def fetch_private_company(company_name: str) -> dict:
                 }
             )
 
-            # Extract employee count from search snippets
             all_text = " ".join(results)
-            emp_match = re.search(r"(\d[\d,]*)\s*employees?", all_text, re.IGNORECASE)
-            if emp_match:
-                report["core_data"]["employees"] = int(
-                    emp_match.group(1).replace(",", "")
+            if report["core_data"]["employees"] is None:
+                emp_match = re.search(
+                    r"(\d[\d,]*)\s*employees?", all_text, re.IGNORECASE
                 )
+                if emp_match:
+                    report["core_data"]["employees"] = int(
+                        emp_match.group(1).replace(",", "")
+                    )
 
-            # Extract funding info from snippets
-            fund_match = re.search(
-                r"(?:raised|funding|secured)\s*(?:a\s+)?(\$[\d,.]+[MBK]?)",
-                all_text,
-                re.IGNORECASE,
-            )
-            if fund_match:
-                report["financials"]["funding_total"] = fund_match.group(1)
+            if not report["financials"]["funding_total"]:
+                fund_match = re.search(
+                    r"(?:raised|funding|secured)\s*(?:a\s+)?(\$[\d,.]+[MBK]?)",
+                    all_text,
+                    re.IGNORECASE,
+                )
+                if fund_match:
+                    report["financials"]["funding_total"] = fund_match.group(1)
 
-            # Extract HQ
-            hq_match = re.search(
-                r"(?:based in|headquarters|HQ)\s*(?:in\s+)?([A-Z][a-zA-Z\s,]+)",
-                all_text,
-            )
-            if hq_match:
-                report["core_data"]["hq_location"] = hq_match.group(1).strip()
+            if not report["core_data"]["hq_location"]:
+                hq_match = re.search(
+                    r"(?:based in|headquarters|HQ)\s*(?:in\s+)?([A-Z][a-zA-Z\s,]+)",
+                    all_text,
+                )
+                if hq_match:
+                    report["core_data"]["hq_location"] = hq_match.group(1).strip()
 
     except Exception as e:
         report["_sources"].append({"source": "duckduckgo", "error": str(e)})
 
     return report
+
+
+def _enrich_from_wikipedia(company_name: str, report: dict) -> None:
+    """Merge Wikipedia data into report — only fills fields that are still empty."""
+    try:
+        from .wikipedia import fetch_company_data
+
+        wiki = fetch_company_data(company_name)
+        if not wiki:
+            return
+
+        if wiki.get("description") and not report["core_data"]["description"]:
+            report["core_data"]["description"] = wiki["description"]
+
+        if wiki.get("founded_year") and report["core_data"]["founded_year"] is None:
+            report["core_data"]["founded_year"] = wiki["founded_year"]
+
+        if wiki.get("hq_location") and not report["core_data"]["hq_location"]:
+            report["core_data"]["hq_location"] = wiki["hq_location"]
+
+        if wiki.get("employees") and report["core_data"]["employees"] is None:
+            report["core_data"]["employees"] = wiki["employees"]
+
+        if wiki.get("revenue_signal"):
+            rev = wiki["revenue_signal"]
+            if report["financials"]["revenue"] is None:
+                report["financials"]["revenue"] = {"wikipedia_est": rev}
+
+        if wiki.get("sector") and not report["core_data"]["sector"]:
+            report["core_data"]["sector"] = wiki["sector"]
+
+        for src in wiki.get("_sources", []):
+            report["_sources"].append(src)
+    except Exception:
+        pass
 
 
 # ── Orchestrator ──────────────────────────────────────────────────────────────

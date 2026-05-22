@@ -28,7 +28,7 @@ companies:
     name: DHL Group
     type: public
     sector: logistics
-    ticker: DPW.DE
+    ticker: DHL.DE
     from_file: data/dhl.json
     reference: true
 
@@ -61,8 +61,186 @@ companies:
     from_file: data/stripe.json
     reference: true
 
+  # Orphaned references rescued
+  - key: dachser
+    name: DACHSER
+    type: private
+    sector: logistics
+    from_file: data/dachser.json
+    reference: true
+
+  - key: db-cargo
+    name: DB Cargo
+    type: public
+    sector: logistics
+    from_file: data/db-cargo.json
+    reference: true
+
+  - key: schenker
+    name: Schenker
+    type: private
+    sector: logistics
+    from_file: data/schenker.json
+    reference: true
+
+  - key: europace
+    name: Europace
+    type: private
+    sector: fintech
+    from_file: data/europace.json
+    reference: true
+
+  - key: schufa
+    name: SCHUFA
+    type: private
+    sector: financial_services
+    from_file: data/schufa.json
+    reference: true
+
+  - key: still
+    name: STILL
+    type: private
+    sector: industrial
+    from_file: data/still.json
+    reference: true
+
+  - key: contargo
+    name: Contargo
+    type: private
+    sector: logistics
+    from_file: data/contargo.json
+    reference: true
+
+  - key: shippeo
+    name: Shippeo
+    type: private
+    sector: supply_chain_tech
+    from_file: data/shippeo.json
+    reference: true
+
+  # New high-value interview targets
+  - key: kuehne-nagel
+    name: Kuehne+Nagel
+    type: public
+    sector: logistics
+    ticker: KNIN.SW
+    from_file: data/kuehne-nagel.json
+    reference: true
+
+  - key: dsv
+    name: DSV
+    type: public
+    sector: logistics
+    ticker: DSV.CO
+    from_file: data/dsv.json
+    reference: true
+
+  - key: fedex
+    name: FedEx
+    type: public
+    sector: logistics
+    ticker: FDX
+    from_file: data/fedex.json
+    reference: true
+
+  - key: ups
+    name: UPS
+    type: public
+    sector: logistics
+    ticker: UPS
+    from_file: data/ups.json
+    reference: true
+
+  - key: mongodb
+    name: MongoDB
+    type: public
+    sector: enterprise_software
+    ticker: MDB
+    from_file: data/mongodb.json
+    reference: true
+
+  - key: snowflake
+    name: Snowflake
+    type: public
+    sector: enterprise_software
+    ticker: SNOW
+    from_file: data/snowflake.json
+    reference: true
+
+  - key: datadog
+    name: Datadog
+    type: public
+    sector: enterprise_software
+    ticker: DDOG
+    from_file: data/datadog.json
+    reference: true
+
+  - key: cloudflare
+    name: Cloudflare
+    type: public
+    sector: enterprise_software
+    ticker: NET
+    from_file: data/cloudflare.json
+    reference: true
+
+  - key: sap
+    name: SAP
+    type: public
+    sector: enterprise_software
+    ticker: SAP
+    from_file: data/sap.json
+    reference: true
+
+  - key: figma
+    name: Figma
+    type: private
+    sector: design_software
+    from_file: data/figma.json
+    reference: true
+
+  - key: canva
+    name: Canva
+    type: private
+    sector: design_software
+    from_file: data/canva.json
+    reference: true
+
+  - key: flix
+    name: Flix
+    type: private
+    sector: mobility
+    from_file: data/flix.json
+    reference: true
+
+  - key: trade-republic
+    name: Trade Republic
+    type: private
+    sector: fintech
+    from_file: data/trade-republic.json
+    reference: true
+
+  - key: mckinsey
+    name: McKinsey
+    type: private
+    sector: consulting
+    from_file: data/mckinsey.json
+    reference: true
+
+  - key: bcg
+    name: BCG
+    type: private
+    sector: consulting
+    from_file: data/bcg.json
+    reference: true
+
 # Pairwise compares generated in demo/batch (slug_a vs slug_b)
 compare_pairs:
   - [rhenus, dhl]
   - [buynomics, personio]
   - [celonis, stripe]
+  - [dachser, schenker]
+  - [kuehne-nagel, dsv]
+  - [fedex, ups]
+  - [mongodb, snowflake]
+  - [figma, canva]
+  - [mckinsey, bcg]

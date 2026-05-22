@@ -90,9 +90,24 @@ _STRONG_LABELS: dict[str, str] = {
     "positioning_drift": "Positioning Drift",
     "heritage_vs_innovation_paradox": "Legacy Disguise",
     "heritage_vs_startup_language": "Maturity Masquerade",
+    "heritage_vs_scale_overlap": "Heritage Halo",
+    "innovation_vs_trust_paradox": "Innovation-Trust Trap",
+    "scale_vs_nimble_innovation": "Scale-Stasis Paradox",
+    "local_vs_global_narrative": "Local-Global Split",
+    "narrative_void": "Narrative Void",
+    "entity_scope": "Entity Scope Ambiguity",
+    "identity_transition": "Identity in Flux",
+    "name_collision": "Name Collision Risk",
+    "silent_positioning": "Silent Operator",
     "revenue_per_employee_gap": "Productivity Gap",
     "funding_efficiency_gap": "Capital Intensity",
     "claim_contradiction": "Self-Contradiction",
+    "esg_sustainability_gap": "Green Facade",
+    "customer_concentration_gap": "Whale Dependency",
+    "moat_delusion": "Moat Mirage",
+    "regulatory_posture_gap": "Compliance Cover",
+    "market_timing_gap": "Timing Mismatch",
+    "complexity_denial_gap": "Simplicity Spin",
 }
 
 
@@ -136,6 +151,13 @@ def detect_gaps(
         _check_revenue_per_employee,
         _check_claim_consistency,
         _check_funding_efficiency,
+        # --- v4 additions (ESG, concentration, moat, regulatory, timing, complexity) ---
+        _check_esg_sustainability_gap,
+        _check_customer_concentration_gap,
+        _check_moat_delusion,
+        _check_regulatory_posture_gap,
+        _check_market_timing_gap,
+        _check_complexity_denial_gap,
     ]
 
     for detector in detectors:
@@ -1258,6 +1280,394 @@ def _check_funding_efficiency(l1: Layer1, l2: Layer2) -> list[Gap]:
     return gaps
 
 
+# ── v4 addition: ESG, customer concentration, moat, regulatory, timing, complexity ──
+
+
+def _check_esg_sustainability_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """Green/sustainable/net-zero claims in high-emission sectors without
+    confirmed transformation programs."""
+    gaps = []
+    if "sustainability" not in l1.claims:
+        return gaps
+
+    high_emission_sectors = {
+        "logistics", "manufacturing", "energy", "chemicals",
+        "aviation", "shipping", "construction", "automotive",
+        "mining", "agriculture", "oil", "gas", "industrial",
+        "transportation", "freight", "airlines",
+    }
+    sector_lower = (l2.sector or "").lower()
+    description_lower = (l2.description or "").lower()
+    combined = f"{sector_lower} {description_lower}"
+
+    is_high_emission = any(s in combined for s in high_emission_sectors)
+    if not is_high_emission:
+        return gaps
+
+    growth_lower = (l2.growth_signal or "").lower()
+    expansion_lower = (l2.expansion_signal or "").lower()
+    combined_growth = f"{growth_lower} {expansion_lower}"
+
+    transformation_kw = [
+        "electric", "renewable", "solar", "wind", "carbon offset",
+        "sustainable fuel", "emission", "emissions", "green logistics",
+        "circular economy", "net zero program", "decarbon",
+        "co2 reduction", "carbon neutral program",
+        "sustainability program", "sustainability initiative",
+        "carbon reduction", "emission reduction",
+    ]
+    has_transformation = any(k in combined_growth for k in transformation_kw)
+
+    if not has_transformation:
+        gaps.append(
+            Gap(
+                category="esg_sustainability_gap",
+                severity="high",
+                claim="Environmental / sustainability / green / net-zero positioning",
+                reality=(
+                    f"Company operates in {l2.sector or 'a high-emission sector'} "
+                    "but no confirmed sustainability or emissions-reduction programs found"
+                ),
+                note=(
+                    "Ask: 'What specific sustainability metrics do you track? "
+                    "How is your carbon intensity trending vs industry average?' "
+                    "Green claims without green operations is a growing scrutiny risk"
+                ),
+            )
+        )
+    else:
+        gaps.append(
+            Gap(
+                category="esg_sustainability_gap",
+                severity="low",
+                claim="Sustainability / green positioning",
+                reality=(
+                    f"Sector is {l2.sector or 'high-emission'} — transformation signals detected: "
+                    f"{combined_growth[:120]}"
+                ),
+                note=(
+                    "Ask: 'What % of revenue comes from green products vs the legacy business?' "
+                    "Transformation signals exist — verify depth vs marketing spend"
+                ),
+            )
+        )
+
+    return gaps
+
+
+def _check_customer_concentration_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """'Thousands of customers' / mass adoption claim but rev/emp
+    suggests enterprise-whale model with few large clients."""
+    gaps = []
+    narrative_lower = l1.narrative.lower()
+
+    mass_kw = [
+        "thousands of", "millions of", "used by", "1000+", "10000+",
+        "100,000+", "over 1000", "companies trust",
+        "adopted by", "customers worldwide", "trusted by",
+    ]
+    claims_mass = any(k in narrative_lower for k in mass_kw)
+    if not claims_mass:
+        return gaps
+
+    emp = _parse_employee_count(l2.employee_signal) or l2.employee_count
+    if not emp or emp < 10:
+        return gaps
+
+    rev_num = _parse_revenue_number(l2.revenue_signal)
+    if rev_num is None:
+        return gaps
+
+    rev_per_emp = rev_num / emp
+
+    if rev_per_emp > 500000:
+        gaps.append(
+            Gap(
+                category="customer_concentration_gap",
+                severity="medium",
+                claim="Mass adoption / thousands of customers positioning",
+                reality=(
+                    f"~${rev_per_emp:,.0f}/employee revenue — "
+                    "consistent with enterprise-whale model (a few large customers), "
+                    "not broad market adoption"
+                ),
+                note=(
+                    "Ask: 'How many paying customers do you have, and what's your net dollar retention?' "
+                    "High rev/emp + mass-adoption claim = handful of whales, not mass market"
+                ),
+            )
+        )
+    elif rev_per_emp > 250000:
+        gaps.append(
+            Gap(
+                category="customer_concentration_gap",
+                severity="low",
+                claim="Broad customer base positioning",
+                reality=(
+                    f"~${rev_per_emp:,.0f}/employee revenue — "
+                    "some concentration risk despite broad adoption language"
+                ),
+                note=(
+                    "Ask about customer count and revenue concentration. "
+                    "Mid-range rev/emp can mean growing base or a few large + many small."
+                ),
+            )
+        )
+
+    return gaps
+
+
+def _check_moat_delusion(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """'Network effects / data moat / flywheel' claims but
+    business signals suggest transactional or services model."""
+    gaps = []
+    if "moat_claim" not in l1.claims:
+        return gaps
+
+    sector_lower = (l2.sector or "").lower()
+    market_lower = (l2.market_signal or "").lower()
+    description_lower = (l2.description or "").lower()
+    combined = f"{sector_lower} {market_lower} {description_lower}"
+
+    transactional_signals = [
+        "consulting", "freight", "logistics", "contract",
+        "outsourcing", "staffing", "recruitment", "project-based",
+        "professional services", "managed services", "broker",
+        "agency", "reseller", "distributor",
+    ]
+    is_transactional = any(s in combined for s in transactional_signals)
+
+    if not is_transactional:
+        commodity_kw = ["many competitors", "fragmented", "crowded", "numerous"]
+        is_commodity = any(k in market_lower for k in commodity_kw)
+        if not is_commodity:
+            return gaps
+
+    emp = _parse_employee_count(l2.employee_signal) or l2.employee_count
+    emp_note = ""
+    if emp is not None and emp < 500:
+        emp_note = f" Team of {emp:,} — network effects typically require scale."
+
+    rev_num = _parse_revenue_number(l2.revenue_signal)
+    rev_note = ""
+    if rev_num is not None and emp is not None and emp > 0:
+        rpe = rev_num / emp
+        if rpe < 150000:
+            rev_note = f" ${rpe:,.0f}/emp suggests services margins, not a platform moat."
+
+    gaps.append(
+        Gap(
+            category="moat_delusion",
+            severity="medium",
+            claim="Platform moat / network effects / ecosystem lock-in / flywheel positioning",
+            reality=(
+                f"Business signals point to {l2.sector or 'transactional'} model — "
+                f"moat claims appear aspirational"
+                f"{emp_note}{rev_note}"
+            ),
+            note=(
+                "Ask: 'What prevents a customer from switching to a competitor? "
+                "Is the moat technical (IP/data), relational (multi-year contracts), "
+                "or network-driven (cross-side)?' Most 'network effects' claims are actually "
+                "just high switching costs."
+            ),
+        )
+    )
+
+    return gaps
+
+
+def _check_regulatory_posture_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """Compliance/security posture vs sector regulation reality.
+
+    Two modes:
+      1. Heavy compliance claims in low-regulation sector → over-indexing
+      2. No compliance messaging in regulated sector → risk blind spot
+    """
+    gaps = []
+    narrative_lower = l1.narrative.lower()
+
+    compliance_kw = [
+        "fully compliant", "compliant with", "gdpr", "sox", "hipaa",
+        "iso 27001", "soc 2", "soc2", "bank-grade", "bank grade",
+        "regulated", "audited", "enterprise security",
+        "certified", "certification", "regulatory",
+    ]
+    claims_compliance = any(k in narrative_lower for k in compliance_kw)
+
+    regulated_sectors = {
+        "fintech", "finance", "banking", "insurance", "healthcare",
+        "pharma", "medical", "legal", "defense", "aerospace",
+        "payments", "credit", "lending",
+    }
+    sector_lower = (l2.sector or "").lower()
+    description_lower = (l2.description or "").lower()
+    combined = f"{sector_lower} {description_lower}"
+    is_regulated = any(s in combined for s in regulated_sectors)
+
+    if claims_compliance and not is_regulated:
+        gaps.append(
+            Gap(
+                category="regulatory_posture_gap",
+                severity="low",
+                claim="Heavy compliance / security / certification positioning",
+                reality=(
+                    f"Company operates in {l2.sector or 'non-regulated'} sector — "
+                    "compliance emphasis may exceed what the market requires"
+                ),
+                note=(
+                    "Ask: 'Which specific regulations drive your compliance posture? "
+                    "Are you selling to regulated buyers who require these certs?' "
+                    "Over-indexing on compliance can mean security-theater over product substance."
+                ),
+            )
+        )
+    elif not claims_compliance and is_regulated:
+        gaps.append(
+            Gap(
+                category="regulatory_posture_gap",
+                severity="high",
+                claim="No compliance / regulatory positioning in public narrative",
+                reality=(
+                    f"Operating in {l2.sector or 'regulated sector'} "
+                    "without public compliance messaging — potential regulatory blind spot"
+                ),
+                note=(
+                    "Ask: 'How do you handle regulatory compliance in your sector?' "
+                    "Silence on compliance in a regulated sector is a red flag — "
+                    "it often means the team hasn't faced regulatory scrutiny yet."
+                ),
+            )
+        )
+
+    return gaps
+
+
+def _check_market_timing_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """'First mover / category creator / pioneer' claims vs actual founding year.
+
+    Two modes:
+      1. Old company (>15 years) claiming first-mover — market has evolved
+      2. Very young company (<3 years) claiming first-mover — aspirational
+    """
+    gaps = []
+    if "uniqueness" not in l1.claims:
+        return gaps
+
+    founded = l2.founded_year
+    if founded is None:
+        return gaps
+
+    narrative_lower = l1.narrative.lower()
+    current_year = 2026
+    age = current_year - founded
+
+    first_mover_kw = [
+        "first mover", "first-of-its-kind", "first of its kind",
+        "category creator", "pioneer in", "pioneering",
+        "first company", "created the category",
+        "invented", "founded the",
+    ]
+    claims_first = any(k in narrative_lower for k in first_mover_kw)
+
+    if not claims_first:
+        return gaps
+
+    if age > 15:
+        gaps.append(
+            Gap(
+                category="market_timing_gap",
+                severity="high",
+                claim="First mover / category creator / pioneer positioning",
+                reality=(
+                    f"Founded {founded} ({age} years ago) — "
+                    "first-mover status, if ever earned, has been overtaken by market evolution"
+                ),
+                note=(
+                    "Reframe: 'Ask what your market share is today, not who was first.' "
+                    "First-mover advantage erodes — the question is whether they maintained it "
+                    "or were leapfrogged."
+                ),
+            )
+        )
+    elif age < 3:
+        gaps.append(
+            Gap(
+                category="market_timing_gap",
+                severity="medium",
+                claim="First mover / category creator / pioneer positioning",
+                reality=(
+                    f"Founded only {age} years ago ({founded}) — "
+                    "too early to claim category creation in an established market"
+                ),
+                note=(
+                    "Ask: 'Who were the players in this space before you?' "
+                    "'First mover' for a young company usually means 'first with our angle,' "
+                    "not genuinely first to market."
+                ),
+            )
+        )
+
+    return gaps
+
+
+def _check_complexity_denial_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
+    """'Simple / easy / frictionless' claims but signals point
+    to enterprise complexity."""
+    gaps = []
+    if "simplicity" not in l1.claims:
+        return gaps
+
+    sector_lower = (l2.sector or "").lower()
+    description_lower = (l2.description or "").lower()
+    combined = f"{sector_lower} {description_lower}"
+
+    complex_sectors = {
+        "enterprise software", "erp", "crm", "hr", "payroll",
+        "compliance", "legal", "healthcare", "infrastructure",
+        "hris", "bpm", "process mining",
+    }
+    is_complex_sector = any(s in combined for s in complex_sectors)
+
+    enterprise_kw = [
+        "enterprise", "fortune 500", "implementation",
+        "deployment", "integration", "customization",
+        "professional services", "implementation partner",
+    ]
+    has_enterprise_signals = any(k in combined for k in enterprise_kw)
+
+    emp = _parse_employee_count(l2.employee_signal) or l2.employee_count
+    large_team = emp is not None and emp > 500
+
+    if is_complex_sector or has_enterprise_signals or large_team:
+        parts = []
+        if is_complex_sector:
+            parts.append(f"sector is {l2.sector}")
+        if has_enterprise_signals:
+            parts.append("enterprise language in description")
+        if large_team:
+            parts.append(f"{emp:,} employees — enterprise scale")
+
+        gaps.append(
+            Gap(
+                category="complexity_denial_gap",
+                severity="medium",
+                claim="Simple / easy-to-use / no-code / frictionless positioning",
+                reality=(
+                    f"Complexity signals detected: {', '.join(parts)} — "
+                    "simplicity claim may reflect UX aspiration, not product reality"
+                ),
+                note=(
+                    "Ask: 'What's your average implementation timeline and time-to-value?' "
+                    "'Simple' positioning + enterprise sales cycle = the tension to explore "
+                    "in an interview. Simplicity is relative — easy for whom?"
+                ),
+            )
+        )
+
+    return gaps
+
+
 # ── Maturity cluster detector (meta) ──────────────────────────────────────────
 
 
@@ -1274,6 +1684,7 @@ _CLUSTERS = [
             "market_share_gap",
             "global_vs_regional",
             "local_champion_facade",
+            "customer_concentration_gap",
         },
         "min_to_escalate": 2,
         "severity_boost": True,
@@ -1290,6 +1701,7 @@ _CLUSTERS = [
             "age_vs_transformation_velocity",
             "product_category_gap",
             "heritage_vs_innovation_paradox",
+            "market_timing_gap",
         },
         "min_to_escalate": 2,
         "severity_boost": True,
@@ -1306,6 +1718,9 @@ _CLUSTERS = [
             "local_vs_global_narrative",
             "claim_contradiction",
             "heritage_vs_startup_language",
+            "complexity_denial_gap",
+            "regulatory_posture_gap",
+            "moat_delusion",
         },
         "min_to_escalate": 2,
         "severity_boost": True,
@@ -1320,6 +1735,7 @@ _CLUSTERS = [
             "funding_efficiency_gap",
             "revenue_per_employee_gap",
             "age_vs_transformation_velocity",
+            "esg_sustainability_gap",
         },
         "min_to_escalate": 2,
         "severity_boost": True,
@@ -1458,8 +1874,8 @@ def _parse_revenue_number(revenue_signal: str) -> Optional[float]:
     multiplier = 1
     if (
         re.search(r"\bbillion\b", val_str, re.IGNORECASE)
-        or "B" in val_str.upper()
-        and not re.search(r"\d+B", val_str)
+        or ("B" in val_str.upper()
+            and not re.search(r"\d+B", val_str))
     ):
         # "391.00B" or "391 billion"
         b_match = re.search(r"[\d.]+(?=\s*B)", val_str, re.IGNORECASE) or re.search(
@@ -1472,8 +1888,8 @@ def _parse_revenue_number(revenue_signal: str) -> Optional[float]:
             return None
     elif (
         re.search(r"\bmillion\b", val_str, re.IGNORECASE)
-        or "M" in val_str.upper()
-        and not re.search(r"\d+M", val_str)
+        or ("M" in val_str.upper()
+            and not re.search(r"\d+M", val_str))
     ):
         m_match = re.search(r"[\d.]+(?=\s*M)", val_str, re.IGNORECASE) or re.search(
             r"([\d.]+)\s*M", val_str, re.IGNORECASE

@@ -580,6 +580,536 @@ def shippeo_reference() -> dict:
     return r
 
 
+def kuehne_nagel_reference() -> dict:
+    r = _base("Kuehne+Nagel", "public")
+    r["ticker"] = "KNIN.SW"
+    r["self_description"]["tagline"] = "Global logistics with a human touch"
+    r["self_description"]["industry_positioning"] = (
+        "World's largest sea freight forwarder — integrated logistics across sea, air, road, and contract logistics"
+    )
+    r["self_description"]["public_statements"] = [
+        "We move goods and deliver value for our customers worldwide.",
+        "Leading in seafreight with digital supply chain solutions.",
+    ]
+    r["core_data"] = {
+        "sector": "Logistics",
+        "industry": "Freight Forwarding / 3PL",
+        "hq_location": "Schindellegi, Switzerland",
+        "employees": 80000,
+        "founded_year": 1890,
+        "description": "World's largest sea freight forwarder and one of the top integrated logistics providers globally",
+    }
+    r["financials"]["revenue"] = {"2023": "23.80B CHF"}
+    r["growth_signals"] = {
+        "revenue_trend": "Cyclical freight market with long-term volume growth",
+        "employee_trend": "~80,000 employees across 100+ countries",
+        "recent_acquisitions": ["City Zone Express (Asia road logistics)", "Multiple niche forwarders"],
+        "expansion_indicators": ["Digital control towers", "Green logistics solutions", "Pharma logistics"],
+    }
+    r["market_position"] = {
+        "competitors": ["DHL", "DSV", "DB Schenker", "Rhenus"],
+        "market": "Global freight forwarding and contract logistics",
+        "moat_description": "Scale in sea freight, digital platform, global network density",
+    }
+    return r
+
+
+def dsv_reference() -> dict:
+    r = _base("DSV", "public")
+    r["ticker"] = "DSV.CO"
+    r["self_description"]["tagline"] = "Global transport and logistics"
+    r["self_description"]["industry_positioning"] = (
+        "Danish global transport and logistics giant — road, sea, air, and solutions via disciplined M&A"
+    )
+    r["self_description"]["public_statements"] = [
+        "We create value for our customers through efficient and sustainable supply chains.",
+        "The best people, the best technology, the best network.",
+    ]
+    r["core_data"] = {
+        "sector": "Logistics",
+        "industry": "Freight Forwarding / 3PL",
+        "hq_location": "Hvidovre, Denmark",
+        "employees": 75000,
+        "founded_year": 1976,
+        "description": "Third-largest global freight forwarder, built through aggressive M&A (Panalpina, GIL, UTi)",
+    }
+    r["financials"]["revenue"] = {"2023": "15.40B EUR"}
+    r["growth_signals"] = {
+        "revenue_trend": "M&A-driven growth; recent DB Schenker acquisition (EUR 14.3B, 2024)",
+        "employee_trend": "75,000+ employees (growing via integration)",
+        "recent_acquisitions": ["DB Schenker (2024, EUR 14.3B)", "Global Integrated Logistics (2019)"],
+        "expansion_indicators": ["Digital logistics platform", "Cross-selling post-acquisition", "Air freight expansion"],
+    }
+    r["market_position"] = {
+        "competitors": ["DHL", "Kuehne+Nagel", "DB Schenker"],
+        "market": "Global freight forwarding and contract logistics",
+        "moat_description": "M&A integration engine, scale, post-Schenker network density",
+    }
+    return r
+
+
+def fedex_reference() -> dict:
+    r = _base("FedEx", "public")
+    r["ticker"] = "FDX"
+    r["self_description"]["tagline"] = "The world on time"
+    r["self_description"]["industry_positioning"] = (
+        "Global express transportation and logistics — air freight, ground delivery, freight forwarding"
+    )
+    r["self_description"]["public_statements"] = [
+        "We connect people and possibilities through our global network.",
+        "The world's most intelligent logistics network.",
+    ]
+    r["core_data"] = {
+        "sector": "Logistics",
+        "industry": "Express / Freight",
+        "hq_location": "Memphis, Tennessee, USA",
+        "employees": 350000,
+        "founded_year": 1971,
+        "description": "Global logistics giant with integrated air-ground network; massive US domestic parcel share",
+    }
+    r["financials"]["revenue"] = {"2024": "87.70B USD", "2023": "90.20B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": "Post-pandemic normalization; cost restructuring underway (DRIVE program)",
+        "employee_trend": "~350,000 employees (post-restructuring)",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["FedEx Ground economy", "Automation in hubs", "Express network optimization"],
+    }
+    r["market_position"] = {
+        "competitors": ["UPS", "DHL", "Amazon Logistics", "USPS"],
+        "market": "Global express and US domestic parcel delivery",
+        "moat_description": "Integrated air-ground network, brand, scale density in US domestic",
+    }
+    return r
+
+
+def ups_reference() -> dict:
+    r = _base("UPS", "public")
+    r["ticker"] = "UPS"
+    r["self_description"]["tagline"] = "Moving our world forward by delivering what matters"
+    r["self_description"]["industry_positioning"] = (
+        "World's largest package delivery company — logistics, supply chain, and freight"
+    )
+    r["self_description"]["public_statements"] = [
+        "We deliver packages and values that shape our world.",
+        "Best service, best people, best innovation in logistics.",
+    ]
+    r["core_data"] = {
+        "sector": "Logistics",
+        "industry": "Parcel / Supply Chain",
+        "hq_location": "Atlanta, Georgia, USA",
+        "employees": 500000,
+        "founded_year": 1907,
+        "description": "World's largest package delivery company; unionized workforce, massive US ground network",
+    }
+    r["financials"]["revenue"] = {"2024": "91.10B USD", "2023": "94.60B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": "Post-pandemic normalization; healthcare and SMB focus",
+        "employee_trend": "~500,000 employees (union workforce)",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["Healthcare logistics", "UPS SurePost redesign", "Automation in sorting"],
+    }
+    r["market_position"] = {
+        "competitors": ["FedEx", "DHL", "Amazon Logistics", "USPS"],
+        "market": "Global parcel and US domestic delivery",
+        "moat_description": "Unionized workforce stability, network density, brand in B2B parcel",
+    }
+    return r
+
+
+def mongodb_reference() -> dict:
+    r = _base("MongoDB", "public")
+    r["ticker"] = "MDB"
+    r["self_description"]["tagline"] = "Build the way you want"
+    r["self_description"]["industry_positioning"] = (
+        "Leading modern document database platform — developer data platform for transactional, search, and analytical workloads"
+    )
+    r["self_description"]["public_statements"] = [
+        "We empower developers to build the next generation of applications.",
+        "The most popular document database in the world.",
+    ]
+    r["core_data"] = {
+        "sector": "Enterprise Software",
+        "industry": "Database / Data Platform",
+        "hq_location": "New York City, USA",
+        "employees": 5100,
+        "founded_year": 2007,
+        "description": "Publicly traded developer data platform; known for MongoDB Atlas cloud database",
+    }
+    r["financials"]["revenue"] = {"2025": "2.40B USD (est.)", "2024": "1.68B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": "Atlas cloud revenue growing 30%+ YoY; land-and-expand model",
+        "employee_trend": "5,100+ employees, growing",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["Atlas cloud (60%+ of revenue)", "Search and vector capabilities", "Industry-specific solutions"],
+    }
+    r["market_position"] = {
+        "competitors": ["AWS DynamoDB", "Google Firestore", "Couchbase", "PostgreSQL ecosystem"],
+        "market": "Document databases and developer data platforms",
+        "moat_description": "Developer mindshare, document data model, Atlas cloud stickiness",
+    }
+    return r
+
+
+def snowflake_reference() -> dict:
+    r = _base("Snowflake", "public")
+    r["ticker"] = "SNOW"
+    r["self_description"]["tagline"] = "Let's solve the world's data problems"
+    r["self_description"]["industry_positioning"] = (
+        "AI Data Cloud platform — unified storage, analytics, and AI/ML workloads on a single cross-cloud platform"
+    )
+    r["self_description"]["public_statements"] = [
+        "We make data simple, accessible, and valuable for every organization.",
+        "The world's data is moving to the Data Cloud.",
+    ]
+    r["core_data"] = {
+        "sector": "Enterprise Software",
+        "industry": "Cloud Data Platform / AI",
+        "hq_location": "Bozeman, Montana, USA",
+        "employees": 7200,
+        "founded_year": 2012,
+        "description": "Cloud-native data platform; massive IPO (2020); AI/ML workload expansion",
+    }
+    r["financials"]["revenue"] = {"2025": "3.70B USD (est.)", "2024": "2.81B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": "Product revenue growing >30% YoY; consumption-based model",
+        "employee_trend": "~7,200 employees",
+        "recent_acquisitions": ["Neeva (AI search, 2023)", "Streamlit (data apps, 2022)"],
+        "expansion_indicators": ["Snowpark ML", "Cortex AI", "Cross-cloud data sharing", "Unistore (transactional)"],
+    }
+    r["market_position"] = {
+        "competitors": ["Databricks", "Amazon Redshift", "Google BigQuery", "Microsoft Fabric"],
+        "market": "Cloud data warehousing and AI data platforms",
+        "moat_description": "Cross-cloud architecture, data sharing network effects, semi-structured data handling",
+    }
+    return r
+
+
+def datadog_reference() -> dict:
+    r = _base("Datadog", "public")
+    r["ticker"] = "DDOG"
+    r["self_description"]["tagline"] = "Cloud monitoring as one"
+    r["self_description"]["industry_positioning"] = (
+        "Observability and security platform for cloud applications — infrastructure, APM, logs, and SIEM"
+    )
+    r["self_description"]["public_statements"] = [
+        "We help organizations see inside any stack, any app, at any scale.",
+        "The standard for cloud monitoring and security.",
+    ]
+    r["core_data"] = {
+        "sector": "Enterprise Software",
+        "industry": "Observability / DevOps",
+        "hq_location": "New York City, USA",
+        "employees": 6500,
+        "founded_year": 2010,
+        "description": "Leading observability platform; Land-and-expand model with 23+ product categories",
+    }
+    r["financials"]["revenue"] = {"2024": "2.60B USD", "2023": "2.10B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": ">25% YoY revenue growth; platform land-and-expand",
+        "employee_trend": "~6,500 employees, growing",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["Cloud SIEM", "Database monitoring", "LLM observability", "Log management"],
+    }
+    r["market_position"] = {
+        "competitors": ["New Relic", "Dynatrace", "Splunk", "Grafana Labs"],
+        "market": "Cloud observability and security monitoring",
+        "moat_description": "Platform breadth (23+ products), single agent, land-and-expand go-to-market",
+    }
+    return r
+
+
+def cloudflare_reference() -> dict:
+    r = _base("Cloudflare", "public")
+    r["ticker"] = "NET"
+    r["self_description"]["tagline"] = "Help build a better Internet"
+    r["self_description"]["industry_positioning"] = (
+        "Cloud connectivity platform — content delivery, security, zero-trust, and edge computing"
+    )
+    r["self_description"]["public_statements"] = [
+        "We make the Internet faster, safer, and more reliable for everyone.",
+        "The global network that powers the next generation of applications.",
+    ]
+    r["core_data"] = {
+        "sector": "Enterprise Software",
+        "industry": "CDN / Security / Edge Computing",
+        "hq_location": "San Francisco, California, USA",
+        "employees": 3900,
+        "founded_year": 2009,
+        "description": "Cloud connectivity platform running 20%+ of web traffic; expanding into zero-trust and developer platform",
+    }
+    r["financials"]["revenue"] = {"2025": "2.00B USD (est.)", "2024": "1.60B USD"}
+    r["growth_signals"] = {
+        "revenue_trend": ">25% YoY revenue growth; large enterprise land-and-expand",
+        "employee_trend": "~3,900 employees",
+        "recent_acquisitions": [],
+        "expansion_indicators": [
+            "Cloudflare Workers (edge compute)",
+            "Zero-Trust network access",
+            "R2 object storage",
+            "AI inference at edge",
+            "Global network across 310+ cities in 120+ countries across North America, Europe, Asia, and Middle East",
+        ],
+    }
+    r["market_position"] = {
+        "competitors": ["Akamai", "Fastly", "Amazon CloudFront", "Zscaler"],
+        "market": "Global CDN, security, and edge computing across 310+ cities worldwide",
+        "moat_description": "Global network scale (310+ cities across NA, EU, Asia, ME), developer platform, integrated security suite",
+    }
+    return r
+
+
+def sap_reference() -> dict:
+    r = _base("SAP", "public")
+    r["ticker"] = "SAP"
+    r["self_description"]["tagline"] = "The best-run businesses run SAP"
+    r["self_description"]["industry_positioning"] = (
+        "World's largest enterprise application software company — ERP, cloud, AI, and business technology platform"
+    )
+    r["self_description"]["public_statements"] = [
+        "We help the world run better and improve people's lives.",
+        "The leading enterprise technology platform for intelligent, sustainable businesses.",
+    ]
+    r["core_data"] = {
+        "sector": "Enterprise Software",
+        "industry": "ERP / Business Software",
+        "hq_location": "Walldorf, Germany",
+        "employees": 105000,
+        "founded_year": 1972,
+        "description": "European software giant; dominant in ERP with massive SAP S/4HANA cloud transition underway",
+    }
+    r["financials"]["revenue"] = {"2024": "34.20B EUR", "2023": "31.20B EUR"}
+    r["growth_signals"] = {
+        "revenue_trend": "Cloud revenue growing >20% YoY; S/4HANA migration driving multi-year transition",
+        "employee_trend": "105,000+ employees globally",
+        "recent_acquisitions": ["WalkMe (digital adoption, 2024)", "LeanIX (enterprise architecture, 2023)"],
+        "expansion_indicators": ["Business AI (Joule)", "SAP Business Technology Platform", "Industry cloud", "Sustainability management"],
+    }
+    r["market_position"] = {
+        "competitors": ["Oracle", "Workday", "Microsoft Dynamics", "Salesforce"],
+        "market": "Global enterprise application software",
+        "moat_description": "Massive ERP installed base (400K+ customers), switching costs, S/4HANA ecosystem",
+    }
+    return r
+
+
+def figma_reference() -> dict:
+    r = _base("Figma", "private")
+    r["self_description"]["tagline"] = "The collaborative interface design tool"
+    r["self_description"]["industry_positioning"] = (
+        "Web-first collaborative design platform — UI/UX, prototyping, design systems, and whiteboarding"
+    )
+    r["self_description"]["public_statements"] = [
+        "We make design accessible to everyone, not just designers.",
+        "Nothing great is made alone — design together in real time.",
+    ]
+    r["core_data"] = {
+        "sector": "Design Software",
+        "industry": "Collaborative Design / UI/UX",
+        "hq_location": "San Francisco, California, USA",
+        "employees": 2000,
+        "founded_year": 2012,
+        "description": "Category-defining collaborative design platform; blocked Adobe acquisition ($20B); growing into dev tools",
+    }
+    r["financials"] = {
+        "revenue": None,
+        "funding_total": "USD 12B+ valuation (2024 secondary)",
+        "last_funding_round": "Secondary (2024)",
+        "notable_investors": ["a16z", "Index Ventures", "Greylock", "Sequoia"],
+    }
+    r["growth_signals"] = {
+        "revenue_trend": "Strong ARR growth; enterprise land-and-expand from design to product/engineering",
+        "employee_trend": "~2,000 employees, growing",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["Figma Dev Mode", "FigJam (whiteboarding)", "AI design features", "Enterprise SSO/permissions"],
+    }
+    r["market_position"] = {
+        "competitors": ["Sketch", "Adobe XD", "Canva", "Miro (adjacent)"],
+        "market": "Collaborative design and prototyping",
+        "moat_description": "Real-time collaboration, plugin ecosystem, browser-native; network effects via design systems",
+    }
+    return r
+
+
+def canva_reference() -> dict:
+    r = _base("Canva", "private")
+    r["self_description"]["tagline"] = "Empowering everyone to design"
+    r["self_description"]["industry_positioning"] = (
+        "World's leading online visual communication platform — democratizing design through templates and AI"
+    )
+    r["self_description"]["public_statements"] = [
+        "We give everyone the power to design anything.",
+        "Making design simple for everyone, everywhere.",
+    ]
+    r["core_data"] = {
+        "sector": "Design Software",
+        "industry": "Visual Communication / Design Platform",
+        "hq_location": "Sydney, Australia",
+        "employees": 4500,
+        "founded_year": 2013,
+        "description": "Design platform for non-designers; massive user base (190M+ monthly active); growing into enterprise",
+    }
+    r["financials"] = {
+        "revenue": None,
+        "funding_total": "USD 40B+ valuation (2024)",
+        "last_funding_round": "Secondary (2024)",
+        "notable_investors": ["Bond", "General Catalyst", "Sequoia", "Felicis"],
+    }
+    r["growth_signals"] = {
+        "revenue_trend": "Strong organic growth; Canva Enterprise and Visual Suite expanding TAM",
+        "employee_trend": "~4,500 employees, growing",
+        "recent_acquisitions": ["Krikey (AI video, 2024)", "Pixlr (photo editor, 2024)", "Affinity (creative suite, 2024)"],
+        "expansion_indicators": ["AI design (Magic Studio)", "Enterprise features", "Printed products", "Video and docs"],
+    }
+    r["market_position"] = {
+        "competitors": ["Adobe", "Figma", "Microsoft Designer"],
+        "market": "Visual communication and online design",
+        "moat_description": "190M+ MAU, template library, freemium-to-enterprise flywheel, AI integrations",
+    }
+    return r
+
+
+def flix_reference() -> dict:
+    r = _base("Flix", "private")
+    r["self_description"]["tagline"] = "Travel. Together."
+    r["self_description"]["industry_positioning"] = (
+        "Global mobility platform — FlixBus and FlixTrain connecting cities via asset-light intercity travel"
+    )
+    r["self_description"]["public_statements"] = [
+        "We make sustainable and affordable travel accessible to everyone.",
+        "The leading green travel technology platform in Europe and beyond.",
+    ]
+    r["core_data"] = {
+        "sector": "Mobility",
+        "industry": "Intercity Bus / Rail / Travel Tech",
+        "hq_location": "Munich, Germany",
+        "employees": 1500,
+        "founded_year": 2013,
+        "description": "Asset-light intercity mobility platform (FlixBus, FlixTrain); expanded to Americas, Asia via FlixMobility",
+    }
+    r["financials"] = {
+        "revenue": None,
+        "funding_total": "USD 3B+ valuation (2022)",
+        "last_funding_round": "Series I (2022)",
+        "notable_investors": ["KKR", "General Atlantic", "TPG"],
+    }
+    r["growth_signals"] = {
+        "revenue_trend": "Post-COVID demand recovery and international expansion",
+        "employee_trend": "~1,500 employees (plus partner drivers)",
+        "recent_acquisitions": ["Greyhound Lines (2021)", "Kamil Koc (Turkey, 2021)"],
+        "expansion_indicators": ["US market (FlixBus USA)", "Latin America expansion", "FlixTrain in Europe", "Dynamic pricing"],
+    }
+    r["market_position"] = {
+        "competitors": ["BlaBlaCar", "National Express", "DB Fernverkehr (trains)"],
+        "market": "European intercity bus and budget train travel",
+        "moat_description": "Asset-light model, density in DACH, brand as green travel alternative, technology platform",
+    }
+    return r
+
+
+def trade_republic_reference() -> dict:
+    r = _base("Trade Republic", "private")
+    r["self_description"]["tagline"] = "The brokerage for Europe"
+    r["self_description"]["industry_positioning"] = (
+        "Neobroker platform — zero-commission stock, ETF, crypto trading and savings plans for retail investors"
+    )
+    r["self_description"]["public_statements"] = [
+        "We make investing accessible to everyone in Europe.",
+        "Save and invest from your smartphone — simple, low-cost, and secure.",
+    ]
+    r["core_data"] = {
+        "sector": "Fintech",
+        "industry": "Brokerage / Investing",
+        "hq_location": "Berlin, Germany",
+        "employees": 600,
+        "founded_year": 2015,
+        "description": "Europe's largest neobroker; 4M+ users; known for zero-commission trades and 4% interest on cash",
+    }
+    r["financials"] = {
+        "revenue": None,
+        "funding_total": "USD 5B+ valuation (2023)",
+        "last_funding_round": "Series C (2023)",
+        "notable_investors": ["Accel", "Sequoia", "Founders Fund", "Peter Thiel"],
+    }
+    r["growth_signals"] = {
+        "revenue_trend": "Strong user growth (4M+); monetization via payment-for-order-flow and interest margin",
+        "employee_trend": "~600 employees, growing",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["Crypto trading", "Interest on cash (4%)", "European expansion", "New asset classes"],
+    }
+    r["market_position"] = {
+        "competitors": ["Scalable Capital", "eToro", "Robinhood", "ING/DKB"],
+        "market": "European retail brokerage and investing",
+        "moat_description": "User base (4M+), BaFin license, zero-commission model, savings plan market leader",
+    }
+    return r
+
+
+def mckinsey_reference() -> dict:
+    r = _base("McKinsey & Company", "private")
+    r["self_description"]["tagline"] = "The world's leading management consulting firm"
+    r["self_description"]["industry_positioning"] = (
+        "Prestigious strategy and management consulting — serving top executives at Fortune 500, governments, and institutions"
+    )
+    r["self_description"]["public_statements"] = [
+        "We help organizations create change that matters.",
+        "The trusted advisor to the world's leading businesses and institutions.",
+    ]
+    r["core_data"] = {
+        "sector": "Consulting",
+        "industry": "Management Consulting / Strategy",
+        "hq_location": "New York City, USA",
+        "employees": 45000,
+        "founded_year": 1926,
+        "description": "Most prestigious management consulting firm; MBB; known for exit opportunities, network, and alumni",
+    }
+    r["financials"]["revenue"] = {"2024": "16.50B USD (est.)", "2023": "15.80B USD (est.)"}
+    r["growth_signals"] = {
+        "revenue_trend": "Steady growth driven by digital, sustainability, and AI practices",
+        "employee_trend": "~45,000 employees (partners, consultants, and staff)",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["McKinsey Digital", "Sustainability practice", "AI/Quantum Black", "Implementation arm"],
+    }
+    r["market_position"] = {
+        "competitors": ["BCG", "Bain", "Deloitte S&O", "Strategy&"],
+        "market": "Global strategy and management consulting",
+        "moat_description": "Brand prestige, C-suite access, alumni network, scale of knowledge assets",
+    }
+    return r
+
+
+def bcg_reference() -> dict:
+    r = _base("Boston Consulting Group", "private")
+    r["self_description"]["tagline"] = "Transforming business for a better world"
+    r["self_description"]["industry_positioning"] = (
+        "Top-tier strategy consulting — growth, corporate finance, digital, and AI for global enterprises"
+    )
+    r["self_description"]["public_statements"] = [
+        "We help clients achieve total societal and business impact.",
+        "Pioneers in business strategy since 1963 — growth-share matrix and beyond.",
+    ]
+    r["core_data"] = {
+        "sector": "Consulting",
+        "industry": "Management Consulting / Strategy",
+        "hq_location": "Boston, Massachusetts, USA",
+        "employees": 32000,
+        "founded_year": 1963,
+        "description": "MBB strategy consulting firm; known for BCG Matrix, thought leadership, and strong corporate culture",
+    }
+    r["financials"]["revenue"] = {"2024": "12.50B USD (est.)", "2023": "12.00B USD (est.)"}
+    r["growth_signals"] = {
+        "revenue_trend": "Strong growth in digital, AI, and sustainability consulting",
+        "employee_trend": "~32,000 employees (including BCG X and Platinion)",
+        "recent_acquisitions": [],
+        "expansion_indicators": ["BCG X (formerly BCG Digital Ventures)", "BCG Platinion (tech implementation)", "AI/GenAI practice", "Climate & sustainability"],
+    }
+    r["market_position"] = {
+        "competitors": ["McKinsey", "Bain", "Deloitte S&O", "Strategy&"],
+        "market": "Global strategy and management consulting",
+        "moat_description": "Brand prestige, proprietary frameworks (BCG Matrix), thought leadership, alumni network",
+    }
+    return r
+
+
 REFERENCE_BY_KEY = {
     "rhenus": rhenus_reference,
     "buynomics": buynomics_reference,
@@ -596,6 +1126,21 @@ REFERENCE_BY_KEY = {
     "still": still_reference,
     "contargo": contargo_reference,
     "shippeo": shippeo_reference,
+    "kuehne-nagel": kuehne_nagel_reference,
+    "dsv": dsv_reference,
+    "fedex": fedex_reference,
+    "ups": ups_reference,
+    "mongodb": mongodb_reference,
+    "snowflake": snowflake_reference,
+    "datadog": datadog_reference,
+    "cloudflare": cloudflare_reference,
+    "sap": sap_reference,
+    "figma": figma_reference,
+    "canva": canva_reference,
+    "flix": flix_reference,
+    "trade-republic": trade_republic_reference,
+    "mckinsey": mckinsey_reference,
+    "bcg": bcg_reference,
 }
 
 

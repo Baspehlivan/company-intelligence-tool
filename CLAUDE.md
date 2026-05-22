@@ -25,12 +25,17 @@ Check `.openclaude/inbox/TASK.md` for the latest delegated task. When done, writ
 
 | File | Purpose |
 |------|---------|
-| `src/analysis/gaps.py` | Heuristic + semantic gap detectors |
+| `src/analysis/gaps.py` | Heuristic + semantic gap detectors (27 total) |
 | `src/analysis/insights.py` | Interview insight synthesis |
 | `src/analysis/llm.py` | LLM backends (openclaude / litellm) |
-| `config/companies.yaml` | Company registry + compare pairs |
-| `config/targets.yaml` | Legacy batch alias |
-| `src/data_collector/reference.py` | Curated snapshots (7 companies) |
+| `src/analysis/report.py` | `GapReportOutput` dataclass + `build_report()` with EDGAR integration |
+| `config/companies.yaml` | Company registry (30 companies) + 9 compare pairs |
+| `src/data_collector/reference.py` | Curated snapshots (30 companies) |
+| `src/data_collector/edgar.py` | SEC EDGAR XBRL financials (revenue, margins, ratios, 5-yr trends) |
+| `src/data_collector/wikipedia.py` | Wikipedia API client (description, founded, HQ, employees, sector) |
+| `src/data_collector/live_collector.py` | Orchestrates Wikipedia → Crunchbase → DuckDuckGo → EDGAR |
+| `src/output/theme.py` | `CIT_CSS_V3` dark/light theme with professional financial sections |
+| `src/output/html_report.py` | Professional HTML report with financial panels + executive summary + peer comparison |
 | `src/data_collector/seed.py` | `python -m src.data_collector.seed` |
 
 ## Do not break

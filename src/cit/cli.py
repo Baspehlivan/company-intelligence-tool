@@ -24,6 +24,11 @@ def _load_or_analyze(
 ) -> GapReportOutput:
     if from_file:
         data = json.loads(Path(from_file).read_text())
+        # Inject registry ticker if data doesn't have one or has stale one
+        if ticker and not data.get("ticker"):
+            data["ticker"] = ticker
+        elif ticker:
+            data["ticker"] = ticker
         return analyze_report(
             data,
             company_name=company,
@@ -45,10 +50,13 @@ def _slug(name: str) -> str:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
+    # Resolve company from registry to get from_file and ticker automatically
+    name, fpath, ticker = _load_company_entry(args.company, args.from_file)
+    ticker = args.ticker or ticker
     report = _load_or_analyze(
-        args.company,
-        ticker=args.ticker,
-        from_file=args.from_file,
+        name,
+        ticker=ticker,
+        from_file=fpath,
         no_llm=args.no_llm,
         no_enrich=args.no_enrich,
     )
@@ -92,13 +100,15 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def _load_company_entry(key_or_name: str, from_file: str | None = None) -> tuple[str, str | None, str | None]:
     """Resolve name, from_file, ticker from registry or raw input."""
-    from src.cit.companies import get_company
+    from src.cit.companies import get_company, resolve_ticker
 
     root = Path(__file__).resolve().parents[2]
     c = get_company(key_or_name)
     if c:
         return c["name"], from_file or c.get("from_file"), c.get("ticker")
-    return key_or_name, from_file, None
+    # Fall back to fuzzy ticker resolution
+    ticker = resolve_ticker(key_or_name)
+    return key_or_name, from_file, ticker
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
