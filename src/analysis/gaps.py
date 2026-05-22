@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from .layers import Layer1, Layer2
@@ -578,7 +579,7 @@ def _check_narrative_staleness(l1: Layer1, l2: Layer2) -> list[Gap]:
         return gaps
 
     if founded < 2020 and l2.data_quality in ("moderate", "rich"):
-        years_ago = 2025 - founded
+        years_ago = datetime.now().year - founded
         gaps.append(
             Gap(
                 category="narrative_staleness",
@@ -937,7 +938,7 @@ def _check_age_vs_transformation_velocity(l1: Layer1, l2: Layer2) -> list[Gap]:
     """Old company (>20 years) claims innovation/transformation but no clear transformation signals."""
     gaps = []
     founded = l2.founded_year
-    current_year = 2026
+    current_year = datetime.now().year
     if founded is None or (current_year - founded) < 20:
         return gaps
 
@@ -972,7 +973,7 @@ def _check_age_vs_transformation_velocity(l1: Layer1, l2: Layer2) -> list[Gap]:
     expansion = (l2.expansion_signal or "").lower()
     has_expansion_signals = any(
         k in expansion
-        for k in ["digital", "platform", "automation", "ai", "saaS", "software"]
+        for k in ["digital", "platform", "automation", "ai", "saas", "software"]
     )
 
     if not has_transformation_signals and not has_expansion_signals:
@@ -1559,7 +1560,7 @@ def _check_market_timing_gap(l1: Layer1, l2: Layer2) -> list[Gap]:
         return gaps
 
     narrative_lower = l1.narrative.lower()
-    current_year = 2026
+    current_year = datetime.now().year
     age = current_year - founded
 
     first_mover_kw = [

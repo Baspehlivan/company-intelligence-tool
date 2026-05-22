@@ -18,6 +18,8 @@ reports/*
 *.swo
 *.swp
 *.tar.gz
+*.code-workspace
+tests/
 Thumbs.db
 .venv/
 venv/

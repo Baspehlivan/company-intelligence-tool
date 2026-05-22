@@ -80,6 +80,7 @@ def build_report(
     )
 
     name = company_name or enriched.get("company_name", "Unknown")
+    enriched.setdefault("_sources", [])
 
     # ── SEC EDGAR + market data enrichment for public companies ──
     financial_summary = ""

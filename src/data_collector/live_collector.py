@@ -13,6 +13,7 @@ import json
 import sys
 import re
 import argparse
+from copy import deepcopy
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -64,7 +65,7 @@ REPORT_SCHEMA = {
 
 
 def empty_report(company_name: str) -> dict:
-    report = dict(REPORT_SCHEMA)
+    report = deepcopy(REPORT_SCHEMA)
     report["company_name"] = company_name
     report["as_of"] = datetime.now().isoformat()
     report["_sources"] = []
