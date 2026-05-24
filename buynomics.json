@@ -1,0 +1,54 @@
+{
+  "company_name": "Buynomics",
+  "as_of": "2026-05-22T22:40:57.678552",
+  "status": "private",
+  "ticker": null,
+  "self_description": {
+    "tagline": "Consumer behavior simulation platform",
+    "mission": "",
+    "industry_positioning": "AI-powered consumer behavior simulation for CPG and retail \u2014 replace slow market research with predictive models",
+    "public_statements": [
+      "We help brands understand consumer decisions through simulation.",
+      "Data-driven pricing and assortment optimization."
+    ]
+  },
+  "core_data": {
+    "sector": "Fintech / SaaS",
+    "industry": "Consumer Behavior Simulation",
+    "hq_location": "Cologne, Germany",
+    "employees": 150,
+    "founded_year": 2018,
+    "description": "AI-powered consumer behavior simulation for CPG and retail"
+  },
+  "financials": {
+    "revenue": null,
+    "funding_total": "EUR 45M+",
+    "last_funding_round": "Series B (EUR 30M, 2023)",
+    "notable_investors": [
+      "Eight Roads Ventures"
+    ]
+  },
+  "growth_signals": {
+    "revenue_trend": "Post-Series B scaling; headcount doubling annually (est.)",
+    "employee_trend": "~100-200 employees, fast growing",
+    "recent_acquisitions": [],
+    "expansion_indicators": [
+      "North American expansion",
+      "Enterprise CPG partnerships"
+    ]
+  },
+  "market_position": {
+    "competitors": [
+      "Traditional market research firms",
+      "Internal analytics teams"
+    ],
+    "market": "CPG pricing and assortment optimization",
+    "moat_description": "Simulation IP; sells to analysts while automating analyst workflows"
+  },
+  "_sources": [
+    {
+      "source": "reference",
+      "note": "curated enrichment"
+    }
+  ]
+}

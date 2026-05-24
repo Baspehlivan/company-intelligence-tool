@@ -26,81 +26,31 @@ def _parse_revenue_number(revenue_signal: str) -> Optional[float]:
       - "Revenue: 100M USD"
       - "Revenue: $50 million"
       - "Revenue: EUR 45M"
+      - "391.00B"
     """
     if not revenue_signal:
         return None
 
     text = revenue_signal
 
-    # Pattern 1: "Revenue trend: year1=X -> year2=Y" — get the latest (rightmost)
-    trend_match = re.search(r"(?:->|→)\s*(.+?)$", text)
-    if trend_match:
-        val_str = trend_match.group(1).strip()
-    else:
-        # Pattern 2: "Revenue: X" — extract first value after "Revenue"
-        rev_prefix = re.search(
-            r"(?:revenue|turnover)\s*[:\-]?\s*([^,;.]+)", text, re.IGNORECASE
-        )
-        if rev_prefix:
-            val_str = rev_prefix.group(1).strip()
-        else:
-            # Pattern 3: any dollar/EUR amount in the text
-            val_str = text
+    # Pattern 1: Trend format — split on -> or →, take the rightmost segment
+    segments = re.split(r"\s*(?:->|→)\s*", text)
+    if len(segments) >= 2:
+        last_seg = segments[-1].strip()
+        # Strip leading "year=" prefix if present (e.g. "2024=8.00B EUR" -> "8.00B EUR")
+        last_seg = re.sub(r"^\d{4}\s*=\s*", "", last_seg).strip()
+        return _parse_money_string(last_seg)
 
-    # Normalize: remove commas, "USD", "EUR", "$", "€", "million", "billion"
-    val_str = (
-        val_str.replace(",", "")
-        .replace("$", "")
-        .replace("€", "")
-        .replace("USD", "")
-        .replace("EUR", "")
-        .strip()
+    # Pattern 2: "Revenue: X" — extract value after "Revenue" or "Turnover"
+    rev_prefix = re.search(
+        r"(?:revenue|turnover)\s*[:\\-]?\s*([^,;]+)", text, re.IGNORECASE
     )
+    if rev_prefix:
+        val_str = rev_prefix.group(1).strip()
+        return _parse_money_string(val_str)
 
-    # Check for B/billion, M/million, K/thousand
-    multiplier = 1
-    if (
-        re.search(r"\bbillion\b", val_str, re.IGNORECASE)
-        or ("B" in val_str.upper()
-            and not re.search(r"\d+B", val_str))
-    ):
-        # "391.00B" or "391 billion"
-        b_match = re.search(r"[\d.]+(?=\s*B)", val_str, re.IGNORECASE) or re.search(
-            r"([\d.]+)\s*B", val_str, re.IGNORECASE
-        )
-        if b_match:
-            val_str = b_match.group(1)
-            multiplier = 1_000_000_000
-        else:
-            return None
-    elif (
-        re.search(r"\bmillion\b", val_str, re.IGNORECASE)
-        or ("M" in val_str.upper()
-            and not re.search(r"\d+M", val_str))
-    ):
-        m_match = re.search(r"[\d.]+(?=\s*M)", val_str, re.IGNORECASE) or re.search(
-            r"([\d.]+)\s*M", val_str, re.IGNORECASE
-        )
-        if m_match:
-            val_str = m_match.group(1)
-            multiplier = 1_000_000
-        else:
-            return None
-    else:
-        # Check for "391.00B" / "100M" compact notation
-        b_compact = re.search(r"([\d.]+)\s*[Bb]", val_str)
-        if b_compact:
-            val_str = b_compact.group(1)
-            multiplier = 1_000_000_000
-        m_compact = re.search(r"([\d.]+)\s*[Mm](?!\w)", val_str)
-        if m_compact:
-            val_str = m_compact.group(1)
-            multiplier = 1_000_000
-
-    try:
-        return float(val_str) * multiplier
-    except (ValueError, TypeError):
-        return None
+    # Pattern 3: Try to parse the whole string as a money value
+    return _parse_money_string(text)
 
 
 def _parse_funding_number(funding_signal: str) -> Optional[float]:
@@ -118,17 +68,17 @@ def _parse_funding_number(funding_signal: str) -> Optional[float]:
 
     # Try "Total funding: X" first
     total_match = re.search(
-        r"(?:total|raised|accumulated)\s*(?:funding|capital|investment)\s*[:\-]?\s*([^;,.]+)",
+        r"(?:total|raised|accumulated)\s*(?:funding|capital|investment)\s*[:\\-]?\s*([^;,.]+)",
         text,
         re.IGNORECASE,
     )
     if total_match:
         val_str = total_match.group(1).strip()
     else:
-        # Fallback: first amount-like string in the text
-        amount_match = re.search(r"([$€£EURUSD]?\s*[\d,.]+)\s*[MBKmbk]", text)
+        # Fallback: first amount-like string in the text (include suffix in capture)
+        amount_match = re.search(r"([$€££]?\s*[\d,.]+)\s*([MBKmbk])", text)
         if amount_match:
-            val_str = amount_match.group(1).strip()
+            val_str = amount_match.group(1).strip() + amount_match.group(2)
         else:
             return None
 

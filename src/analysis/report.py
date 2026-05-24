@@ -5,7 +5,8 @@ Report assembly: combines layers, gaps, edge cases, and insights into final outp
 import json
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
+from dataclasses import fields
 
 from .layers import Layer1, Layer2, extract_layer1, extract_layer2
 from .gaps import GapReport, detect_gaps
@@ -157,8 +158,8 @@ def build_report(
         elif md.get("_error"):
             edge.warnings.append(f"Market data unavailable: {md['_error']}")
 
-    # ── Fallback: extract whatever financial data exists in enriched data ──
-    # This covers private companies and non-US tickers with reference data
+    # ── Fallback: revenue estimation for private companies ──
+    # When EDGAR/yfinance is unavailable, estimate from employee count × sector benchmarks
     if not financial_ratios:
         core = enriched.get("core_data", {})
         fin = enriched.get("financials", {})
@@ -172,6 +173,31 @@ def build_report(
         rev_text = fin.get("revenue_text") or (str(list(rev_raw.values())[0]) if isinstance(rev_raw, dict) and rev_raw else "")
         if rev_text:
             financial_ratios["_revenue_text"] = rev_text
+
+        # Revenue estimation from sector × employee benchmarks
+        # (runs for private companies and any company without known revenue)
+        if not fin.get("revenue"):
+            sector = core.get("sector", "")
+            emp = core.get("employees")
+            from src.analysis.revenue_estimator import estimate_revenue
+            rev_est = estimate_revenue(
+                sector=sector,
+                employees=emp,
+                known_revenue=fin.get("revenue"),
+            )
+            if rev_est.get("estimated_revenue"):
+                financial_ratios["_estimated_revenue"] = rev_est["estimated_revenue"]
+                financial_ratios["_revenue_est_low"] = rev_est["estimated_revenue_low"]
+                financial_ratios["_revenue_est_mid"] = rev_est["estimated_revenue_mid"]
+                financial_ratios["_revenue_est_high"] = rev_est["estimated_revenue_high"]
+                financial_ratios["_revenue_est_method"] = rev_est["estimation_method"]
+                financial_ratios["_revenue_est_confidence"] = rev_est["estimation_confidence"]
+                enriched["_sources"].append({
+                    "source": "revenue_estimator",
+                    "method": rev_est["estimation_method"],
+                    "confidence": rev_est["estimation_confidence"],
+                    "sector_used": rev_est["sector_used"],
+                })
 
     # ── Sector benchmarks (run for ANY company with sector info) ──
     sector = enriched.get("core_data", {}).get("sector", "")
@@ -279,10 +305,24 @@ def _generate_executive_summary(
         lines.append(f"  Sector: {sector}")
     if isinstance(rev, dict) and rev:
         latest = sorted(rev.keys())[-1]
-        from src.data_collector.edgar import _fmt
-        lines.append(f"  Revenue ({latest}): {_fmt(rev[latest])}")
+        from src.cit._utils import fmt_large
+        lines.append(f"  Revenue ({latest}): ${fmt_large(rev[latest])}")
+    elif ratios.get("_estimated_revenue"):
+        est = ratios["_estimated_revenue"]
+        conf = ratios.get("_revenue_est_confidence", "")
+        lines.append(f"  Estimated revenue: {est} ({conf} confidence)")
     if emp:
         lines.append(f"  Employees: {emp:,}")
+
+    # Hiring signal
+    hiring = enriched.get("hiring_signal", {})
+    if hiring and hiring.get("job_count", 0) > 0:
+        growth = hiring.get("growth_estimate", "")
+        velocity = hiring.get("hiring_velocity", "")
+        if growth:
+            lines.append(f"  Hiring signal: {growth}")
+        if velocity:
+            lines.append(f"  Hiring velocity: {velocity}")
 
     lines.append("")
     lines.append("<strong>Key Tension</strong>")
@@ -331,6 +371,13 @@ def _generate_executive_summary(
     return "<br>".join(lines)
 
 
+def report_from_dict(data: dict[str, Any]) -> "GapReportOutput":
+    """Reconstruct a GapReportOutput from a JSON dict (for re-rendering saved reports)."""
+    valid = {f.name for f in fields(GapReportOutput)}
+    kwargs = {k: v for k, v in data.items() if k in valid}
+    return GapReportOutput(**kwargs)
+
+
 def _generate_peer_comparison(name: str, ratios: dict, enriched: dict) -> str:
     """Generate peer benchmarking HTML from financial ratios and market data."""
     if not ratios.get("revenue") and not ratios.get("revenue_per_employee"):
@@ -344,8 +391,8 @@ def _generate_peer_comparison(name: str, ratios: dict, enriched: dict) -> str:
     if rev:
         years = sorted(rev.keys())
         for y in years[-3:]:
-            from src.data_collector.edgar import _fmt
-            lines.append(f"<tr><td>Revenue {y}</td><td class='num'>{_fmt(rev[y])}</td></tr>")
+            from src.cit._utils import fmt_large
+            lines.append(f"<tr><td>Revenue {y}</td><td class='num'>${fmt_large(rev[y])}</td></tr>")
 
     growth = ratios.get("revenue_growth", {})
     if growth:
@@ -377,8 +424,8 @@ def _generate_peer_comparison(name: str, ratios: dict, enriched: dict) -> str:
         val = ratios.get(key)
         if val:
             if key in ("market_cap", "enterprise_value"):
-                from src.data_collector.edgar import _fmt
-                lines.append(f"<tr><td>{label}</td><td class='num'>${_fmt(val)}</td></tr>")
+                from src.cit._utils import fmt_large
+                lines.append(f"<tr><td>{label}</td><td class='num'>${fmt_large(val)}</td></tr>")
             else:
                 lines.append(f"<tr><td>{label}</td><td class='num'>{val:.1f}{suf}</td></tr>")
 

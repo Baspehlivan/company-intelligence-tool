@@ -950,69 +950,38 @@ def _check_claim_consistency(l1: Layer1, l2: Layer2) -> list[Gap]:
     claims = set(l1.claims)
     narrative_lower = l1.narrative.lower()
 
+    # Claim-set contradictions (heritage vs innovation, etc.)
     contradictions = [
-        (
-            {"heritage"},
-            {"innovation"},
-            "heritage_vs_innovation_paradox",
-            "high",
-            "Heritage/traditional operator claiming next-generation innovation",
-            "Heritage and innovation positioning detected simultaneously — suggests rebrand of legacy operation, not greenfield innovation",
-            "Classic reframe: ask for R&D investment as % of revenue vs industry average. Heritage marketing and product innovation rarely coexist at the speed claimed.",
-        ),
-        (
-            {"heritage"},
-            {"growth"},
-            "heritage_vs_startup_language",
-            "medium",
-            "Established operator using startup-style 'fast-growing' language",
-            "Heritage/established positioning alongside 'fast-growing'/'scaling' claims — maturity framing mismatch",
-            "Ask: 'What's growing — revenue from new products or legacy operations?' Fast-growing established companies are usually transforming, not accelerating core.",
-        ),
-        (
-            {"heritage"},
-            {"scale"},
-            "heritage_vs_scale_overlap",
-            "low",
-            "Heritage operator claiming global scale",
-            "Heritage and scale claims both present — internally consistent but may hide transformation needs",
-            "Heritage + scale is common for incumbents. The question is transformation velocity, not positioning truth.",
-        ),
-        (
-            {"innovation"},
-            {"trust"},
-            "innovation_vs_trust_paradox",
-            "medium",
-            "Bold innovation/disruption claims alongside trust/reliability positioning",
-            "Disruption language and enterprise trust language used simultaneously — two different buyer personas targeted with one narrative",
-            "Ask: 'Which buyer does your innovation serve — the risk-taker or the risk-averse?' This tension often reveals a muddled go-to-market.",
-        ),
-        (
-            {"scale"},
-            {"innovation"},
-            "scale_vs_nimble_innovation",
-            "low",
-            "Global scale claim alongside innovation/disruption framing",
-            "Scale and innovation claims together — possible but rare",
-            "Innovators at scale (Apple, Amazon) are exceptions, not the rule. Ask whether innovation spend is percentage-significant or absolute-small.",
-        ),
-        (
-            set(),
-            set(),
-            "local_vs_global_narrative",
-            "medium",
-            "Claims both local/specialist and global/international positioning",
-            "Local and global framing detected in the same narrative — inconsistent market positioning",
-            "Ask: 'Describe your primary market — is it regional depth or global breadth?' Simultaneous local+global claims often mean neither is true.",
-        ),
+        ({"heritage"}, {"innovation"}, "heritage_vs_innovation_paradox", "high",
+         "Heritage/traditional operator claiming next-generation innovation",
+         "Heritage and innovation positioning detected simultaneously — suggests rebrand of legacy operation, not greenfield innovation",
+         "Classic reframe: ask for R&D investment as % of revenue vs industry average. Heritage marketing and product innovation rarely coexist at the speed claimed."),
+        ({"heritage"}, {"growth"}, "heritage_vs_startup_language", "medium",
+         "Established operator using startup-style 'fast-growing' language",
+         "Heritage/established positioning alongside 'fast-growing'/'scaling' claims — maturity framing mismatch",
+         "Ask: 'What's growing — revenue from new products or legacy operations?' Fast-growing established companies are usually transforming, not accelerating core."),
+        ({"heritage"}, {"scale"}, "heritage_vs_scale_overlap", "low",
+         "Heritage operator claiming global scale",
+         "Heritage and scale claims both present — internally consistent but may hide transformation needs",
+         "Heritage + scale is common for incumbents. The question is transformation velocity, not positioning truth."),
+        ({"innovation"}, {"trust"}, "innovation_vs_trust_paradox", "medium",
+         "Bold innovation/disruption claims alongside trust/reliability positioning",
+         "Disruption language and enterprise trust language used simultaneously — two different buyer personas targeted with one narrative",
+         "Ask: 'Which buyer does your innovation serve — the risk-taker or the risk-averse?' This tension often reveals a muddled go-to-market."),
+        ({"scale"}, {"innovation"}, "scale_vs_nimble_innovation", "low",
+         "Global scale claim alongside innovation/disruption framing",
+         "Scale and innovation claims together — possible but rare",
+         "Innovators at scale (Apple, Amazon) are exceptions, not the rule. Ask whether innovation spend is percentage-significant or absolute-small."),
     ]
 
+    for left_set, right_set, cat, severity, claim, reality, note in contradictions:
+        if claims & left_set and claims & right_set:
+            gaps.append(Gap(category=cat, severity=severity, claim=claim, reality=reality, note=note))
+
+    # Narrative-keyword contradiction (local vs global — detected from narrative, not claims)
     local_kw = ["local", "regional", "home market", "domestic"]
     global_kw = ["global", "worldwide", "international", "across"]
-    has_local = any(k in narrative_lower for k in local_kw)
-    has_global = any(k in narrative_lower for k in global_kw)
-
-    if has_local and has_global:
+    if any(k in narrative_lower for k in local_kw) and any(k in narrative_lower for k in global_kw):
         gaps.append(
             Gap(
                 category="local_vs_global_narrative",
@@ -1022,22 +991,6 @@ def _check_claim_consistency(l1: Layer1, l2: Layer2) -> list[Gap]:
                 note="Ask: 'Describe your primary market — is it regional depth or global breadth?' Simultaneous local+global claims often mean neither is true.",
             )
         )
-
-    for left_set, right_set, cat, severity, claim, reality, note in contradictions:
-        if cat == "local_vs_global_narrative":
-            continue
-        has_left = bool(claims & left_set)
-        has_right = bool(claims & right_set)
-        if has_left and has_right:
-            gaps.append(
-                Gap(
-                    category=cat,
-                    severity=severity,
-                    claim=claim,
-                    reality=reality,
-                    note=note,
-                )
-            )
 
     return gaps
 

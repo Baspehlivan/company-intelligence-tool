@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Unified CIT CLI: report, compare, serve."""
+"""Unified CIT CLI — one command, many modes.
+
+Commands:
+  report      Analyze a company and output a report (HTML, JSON, dashboard, etc.)
+  compare     Side-by-side comparison of two companies
+  companies   List registered companies and compare pairs
+  serve       Start the FastAPI demo server
+  delegate    Hand off a task to OpenClaude
+"""
 
 from __future__ import annotations
 
@@ -8,9 +16,8 @@ import json
 import sys
 from pathlib import Path
 
-from src.analysis.engine import analyze_report, analyze_company  # noqa: used in compare
-from src.analysis.report import GapReportOutput
-from src.output.models import report_from_dict
+from src.analysis.engine import analyze_report, analyze_company
+from src.analysis.report import GapReportOutput, report_from_dict
 from src.output.render import render_report, render_compare
 
 
@@ -24,10 +31,7 @@ def _load_or_analyze(
 ) -> GapReportOutput:
     if from_file:
         data = json.loads(Path(from_file).read_text())
-        # Inject registry ticker if data doesn't have one or has stale one
         if ticker and not data.get("ticker"):
-            data["ticker"] = ticker
-        elif ticker:
             data["ticker"] = ticker
         return analyze_report(
             data,
@@ -49,9 +53,72 @@ def _slug(name: str) -> str:
     return name.lower().replace(" ", "-").replace("_", "-")
 
 
+def _resolve_company(key_or_name: str, from_file: str | None = None):
+    """Resolve name, file path, and ticker from registry or raw input."""
+    from src.cit.companies import get_company, resolve_ticker
+
+    c = get_company(key_or_name)
+    if c:
+        return c["name"], from_file or c.get("from_file"), c.get("ticker")
+    ticker = resolve_ticker(key_or_name)
+    return key_or_name, from_file, ticker
+
+
 def cmd_report(args: argparse.Namespace) -> int:
-    # Resolve company from registry to get from_file and ticker automatically
-    name, fpath, ticker = _load_company_entry(args.company, args.from_file)
+    """Analyze a company and output report(s). Handles all modes: single, batch, demo."""
+    from src.cit.companies import get_company, slug_for
+    from src.cit.companies import ROOT as REGISTRY_ROOT
+
+    # ── Demo mode: generate portfolio bundle ──
+    if args.demo:
+        from src.cit.demo import run_demo
+
+        keys = args.only.split(",") if args.only else None
+        out_dir = args.out_dir or "reports/demo"
+        out = run_demo(Path(out_dir), no_llm=args.no_llm, keys=keys)
+        print(f"Demo bundle written to {out}/", file=sys.stderr)
+        print(f"  Open: {out / 'index.html'}", file=sys.stderr)
+        return 0
+
+    # ── Batch mode: analyze all targets ──
+    if args.batch:
+        from src.cit.batch import run_batch
+
+        paths = run_batch(Path(args.out_dir), no_llm=args.no_llm)
+        print(f"Batch complete: {len(paths)} files in {args.out_dir}", file=sys.stderr)
+        return 0
+
+    # ── Collect mode: fetch collector JSON without analysis ──
+    if args.collect:
+        from src.data_collector.live_collector import fetch_company
+        from src.data_collector.seed import seed_all as seed_reference
+
+        c = get_company(args.company)
+        if not c:
+            print(f"Unknown company: {args.company}. Run: cit companies", file=sys.stderr)
+            return 1
+
+        slug = slug_for(c)
+        out = REGISTRY_ROOT / "data" / f"{slug}.json"
+
+        if args.seed:
+            seed_reference(REGISTRY_ROOT / "data", [slug])
+            print(f"Seeded reference data -> {out}", file=sys.stderr)
+            return 0
+
+        report = fetch_company(c["name"], ticker=c.get("ticker"))
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+        print(f"Collected -> {out}", file=sys.stderr)
+        return 0
+
+    # ── Guard: single report mode requires a company name ──
+    if not args.company:
+        parser.print_help()
+        print("\nError: report requires a company name (or --demo / --batch / --collect)", file=sys.stderr)
+        return 1
+
+    name, fpath, ticker = _resolve_company(args.company, args.from_file)
     ticker = args.ticker or ticker
     report = _load_or_analyze(
         name,
@@ -61,12 +128,14 @@ def cmd_report(args: argparse.Namespace) -> int:
         no_enrich=args.no_enrich,
     )
 
+    # Auto-path when --out-dir specified
     if args.out_dir:
         out = Path(args.out_dir)
-        slug = _slug(args.company)
+        slug = _slug(name)
         args.html = args.html or str(out / f"{slug}.html")
         args.json = args.json or str(out / f"{slug}.json")
 
+    # Render each requested format
     outputs: list[tuple[str, str | None]] = []
     if args.html:
         outputs.append(("html", args.html))
@@ -76,9 +145,10 @@ def cmd_report(args: argparse.Namespace) -> int:
         outputs.append(("csv", args.csv))
     if args.pdf:
         outputs.append(("pdf", args.pdf))
-    if args.json or args.output:
-        outputs.append(("json", args.json or args.output))
+    if args.json:
+        outputs.append(("json", args.json))
 
+    # Default: show dashboard
     if args.dashboard or not outputs:
         render_report(report, fmt="dashboard")
         if not outputs:
@@ -89,7 +159,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         if fmt == "pdf" and not p:
             print("PDF requires --pdf PATH", file=sys.stderr)
             return 1
-        result = render_report(report, fmt=fmt, path=p)  # type: ignore
+        result = render_report(report, fmt=fmt, path=p)
         if result and p:
             print(f"Wrote {result}", file=sys.stderr)
         elif result and fmt == "json" and not p:
@@ -98,28 +168,16 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
-def _load_company_entry(key_or_name: str, from_file: str | None = None) -> tuple[str, str | None, str | None]:
-    """Resolve name, from_file, ticker from registry or raw input."""
-    from src.cit.companies import get_company, resolve_ticker
-
-    root = Path(__file__).resolve().parents[2]
-    c = get_company(key_or_name)
-    if c:
-        return c["name"], from_file or c.get("from_file"), c.get("ticker")
-    # Fall back to fuzzy ticker resolution
-    ticker = resolve_ticker(key_or_name)
-    return key_or_name, from_file, ticker
-
-
 def cmd_compare(args: argparse.Namespace) -> int:
+    """Side-by-side comparison of two companies."""
     reports = []
     for i, company in enumerate(args.companies):
         from_file = None
         if args.from_files and i < len(args.from_files):
             from_file = args.from_files[i]
-        name, fpath, ticker = _load_company_entry(company, from_file)
+        name, fpath, ticker = _resolve_company(company, from_file)
         if fpath:
-            data = json.loads((Path(__file__).resolve().parents[2] / fpath).read_text())
+            data = json.loads(Path(fpath).read_text())
             reports.append(
                 analyze_report(
                     data,
@@ -158,7 +216,7 @@ def _compare_md(a: GapReportOutput, b: GapReportOutput) -> str:
     lines = [
         f"# Compare: {a.company_name} vs {b.company_name}",
         "",
-        "| Metric | " + a.company_name + " | " + b.company_name + " |",
+        f"| Metric | {a.company_name} | {b.company_name} |",
         "|--------|" + "---|" * 2,
         f"| Confidence | {a.confidence} | {b.confidence} |",
         f"| Data quality | {a.data_quality} | {b.data_quality} |",
@@ -172,6 +230,7 @@ def _compare_md(a: GapReportOutput, b: GapReportOutput) -> str:
 
 
 def cmd_companies(args: argparse.Namespace) -> int:
+    """List registered companies and compare pairs."""
     from src.cit.companies import load_companies, load_compare_pairs
 
     for c in load_companies():
@@ -183,56 +242,22 @@ def cmd_companies(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_collect(args: argparse.Namespace) -> int:
-    """Fetch live data or seed from reference into data/{key}.json."""
-    from src.cit.companies import get_company, slug_for, ROOT
-    from src.data_collector.live_collector import fetch_company
-    from src.data_collector.seed import seed_all
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Start FastAPI demo server."""
+    import uvicorn
+    from src.cit.api import app
 
-    c = get_company(args.company)
-    if not c:
-        print(f"Unknown company: {args.company}. Run: ./cit companies", file=sys.stderr)
-        return 1
-
-    slug = slug_for(c)
-    out = ROOT / "data" / f"{slug}.json"
-
-    if args.seed:
-        seed_all(ROOT / "data", [slug])
-        print(f"Seeded reference data → {out}", file=sys.stderr)
-        return 0
-
-    report = fetch_company(c["name"], ticker=c.get("ticker"))
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
-    print(f"Collected → {out}", file=sys.stderr)
-    return 0
-
-
-def cmd_demo(args: argparse.Namespace) -> int:
-    from src.cit.demo import run_demo
-
-    keys = args.only.split(",") if args.only else None
-    out = run_demo(Path(args.out_dir), no_llm=args.no_llm, keys=keys)
-    print(f"Demo bundle written to {out}/", file=sys.stderr)
-    print(f"  Open: {out / 'index.html'}", file=sys.stderr)
-    return 0
-
-
-def cmd_batch(args: argparse.Namespace) -> int:
-    from src.cit.batch import run_batch
-
-    paths = run_batch(Path(args.out_dir), no_llm=args.no_llm)
-    print(f"Batch complete: {len(paths)} files in {args.out_dir}", file=sys.stderr)
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 
 
 def cmd_delegate(args: argparse.Namespace) -> int:
+    """Hand off a task to OpenClaude."""
     from src.integration.openclaude_runner import delegate_task, try_headless
 
     path = delegate_task(args.task, context=args.context)
     print(f"Task written to {path}", file=sys.stderr)
-    print("OpenClaude: read .openclaude/inbox/TASK.md in your openclaude session (~/cit)", file=sys.stderr)
+    print("OpenClaude: read .openclaude/inbox/TASK.md in your openclaude session", file=sys.stderr)
 
     if args.run:
         ok, msg = try_headless(args.task)
@@ -243,103 +268,64 @@ def cmd_delegate(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_serve(args: argparse.Namespace) -> int:
-    import uvicorn
-    from src.cit.api import app
-
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
-    return 0
-
-
-def cmd_view(args: argparse.Namespace) -> int:
-    """Render existing JSON report to HTML/dashboard without re-analyzing."""
-    data = json.loads(Path(args.file).read_text())
-    report = report_from_dict(data)
-    if args.dashboard:
-        render_report(report, fmt="dashboard")
-    if args.html:
-        render_report(report, fmt="html", path=Path(args.html))
-        print(f"Wrote {args.html}", file=sys.stderr)
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cit",
-        description="Company Intelligence Tool — collect, analyze, present",
+        description="Company Intelligence Tool — collect, analyze, and present company intelligence",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_analysis_flags(p):
-        p.add_argument("--no-llm", action="store_true", help="Template synthesis only")
+        p.add_argument("--no-llm", action="store_true", help="Template synthesis only (no API calls)")
         p.add_argument("--no-enrich", action="store_true", help="Skip reference enrichment")
 
-    p_report = sub.add_parser("report", help="Analyze and output a company report")
+    # ── report (the main command) ──
+    p_report = sub.add_parser("report", help="Analyze a company and generate reports")
     add_analysis_flags(p_report)
-    p_report.add_argument("company", help="Company name")
-    p_report.add_argument("--ticker", "-t", help="Stock ticker")
-    p_report.add_argument("--from-file", "-f", help="Use collector JSON")
-    p_report.add_argument("--dashboard", "-d", action="store_true", help="Rich terminal UI")
+    p_report.add_argument("company", nargs="?", default=None, help="Company name (omit for --demo or --batch)")
+    p_report.add_argument("--ticker", "-t", help="Stock ticker (skip auto-detect)")
+    p_report.add_argument("--from-file", "-f", help="Load collector JSON instead of live fetch")
+    p_report.add_argument("--dashboard", "-d", action="store_true", help="Rich terminal dashboard output")
     p_report.add_argument("--html", help="Write HTML report path")
     p_report.add_argument("--md", help="Write Markdown path")
     p_report.add_argument("--csv", help="Write gaps CSV path")
     p_report.add_argument("--pdf", help="Write PDF path")
     p_report.add_argument("--json", help="Write JSON path")
-    p_report.add_argument("--output", "-o", help="Alias for --json")
-    p_report.add_argument(
-        "--out-dir",
-        help="Write {company}.html and {company}.json into this directory",
-    )
+    p_report.add_argument("--out-dir", help="Write {company}.html and {company}.json into directory")
+
+    # Modes (merging old demo/batch/collect subcommands)
+    p_report.add_argument("--demo", action="store_true", help="Generate portfolio demo bundle (reports/demo/)")
+    p_report.add_argument("--batch", action="store_true", help="Analyze all targets from config/targets.yaml")
+    p_report.add_argument("--collect", action="store_true", help="Fetch collector JSON only (no analysis)")
+    p_report.add_argument("--seed", action="store_true", help="With --collect: use curated reference (no network)")
+    p_report.add_argument("--only", help="With --demo: comma-separated company keys (e.g. rhenus,dhl)")
+
     p_report.set_defaults(func=cmd_report)
 
-    p_demo = sub.add_parser("demo", help="Generate portfolio demo bundle (reports/demo/)")
-    add_analysis_flags(p_demo)
-    p_demo.add_argument("--out-dir", default="reports/demo", help="Output directory")
-    p_demo.add_argument("--only", help="Comma-separated company keys (e.g. rhenus,dhl)")
-    p_demo.set_defaults(func=cmd_demo)
-
-    sub.add_parser("companies", help="List registered companies").set_defaults(func=cmd_companies)
-
-    p_col = sub.add_parser("collect", help="Fetch or seed collector JSON for a company")
-    p_col.add_argument("company", help="Company key from config/companies.yaml")
-    p_col.add_argument("--seed", action="store_true", help="Use curated reference (no network)")
-    p_col.set_defaults(func=cmd_collect)
-
-    p_batch = sub.add_parser("batch", help="Analyze all targets from config/targets.yaml")
-    add_analysis_flags(p_batch)
-    p_batch.add_argument("--out-dir", default="reports/batch", help="Output directory")
-    p_batch.set_defaults(func=cmd_batch)
-
+    # ── compare ──
     p_cmp = sub.add_parser("compare", help="Side-by-side comparison of two companies")
     add_analysis_flags(p_cmp)
     p_cmp.add_argument("companies", nargs=2, help="Two company names")
-    p_cmp.add_argument(
-        "--from-files", nargs=2, metavar="FILE",
-        help="Collector JSON files (one per company)",
-    )
+    p_cmp.add_argument("--from-files", nargs=2, metavar="FILE", help="Collector JSON files (one per company)")
     p_cmp.add_argument("--html", help="Write compare HTML")
     p_cmp.add_argument("--md", help="Write compare Markdown")
-    p_cmp.add_argument("--no-dashboard", action="store_true")
+    p_cmp.add_argument("--no-dashboard", action="store_true", help="Skip terminal dashboard")
     p_cmp.set_defaults(func=cmd_compare)
 
-    p_view = sub.add_parser("view", help="Render saved JSON report")
-    p_view.add_argument("file", help="Gap report JSON")
-    p_view.add_argument("--dashboard", "-d", action="store_true")
-    p_view.add_argument("--html", help="HTML output path")
-    p_view.set_defaults(func=cmd_view)
+    # ── companies ──
+    sub.add_parser("companies", help="List registered companies and compare pairs").set_defaults(func=cmd_companies)
 
+    # ── serve ──
     p_serve = sub.add_parser("serve", help="Start FastAPI demo server")
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.set_defaults(func=cmd_serve)
 
-    p_del = sub.add_parser(
-        "delegate",
-        help="Hand off a task to OpenClaude (writes .openclaude/inbox/TASK.md)",
-    )
-    p_del.add_argument("task", help="Task description for OpenClaude")
+    # ── delegate ──
+    p_del = sub.add_parser("delegate", help="Hand off a task to OpenClaude")
+    p_del.add_argument("task", help="Task description")
     p_del.add_argument("--run", action="store_true", help="Also try openclaude -p headless")
-    p_del.add_argument("--context", default="", help="Extra context for the task")
+    p_del.add_argument("--context", default="", help="Extra context")
     p_del.set_defaults(func=cmd_delegate)
 
     args = parser.parse_args(argv)
